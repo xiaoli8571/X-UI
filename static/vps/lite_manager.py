@@ -57,11 +57,13 @@ heartbeat_wakeup = threading.Event()
 last_http_report = 0
 # Persist a regular HTTP snapshot even while realtime is connected. This keeps
 # the dashboard usable when a Durable Object websocket reconnects or is stale.
-# Throttled to 5 minutes to match agent.py and avoid burning Workers quota.
-REALTIME_HTTP_INTERVAL = 300
+# Throttled to 480s to match user preference and avoid burning Workers quota.
+REALTIME_HTTP_INTERVAL = 480
 REALTIME_STATUS_ACTIVE_INTERVAL = 5
 REALTIME_STATUS_IDLE_INTERVAL = 30
 realtime_status_interval = REALTIME_STATUS_ACTIVE_INTERVAL
+# 低功耗模式：面板关闭住宅代理时置 True，停止 HTTP 轮询/上报以节省额度
+proxy_low_power = False
 
 state_lock = threading.Lock()
 dead_ips = set()
@@ -259,6 +261,8 @@ def update_config_loop():
             try:
                 pc = data.get("proxy") or {}
                 if isinstance(pc, dict):
+                    global proxy_low_power
+                    proxy_low_power = (pc.get("enabled") is False)
                     enabled = pc.get("enabled") is not False
                     pu = str(pc.get("user", "")) or env_secret("PROXY_USER")
                     pp = str(pc.get("pass", "")) or env_secret("PROXY_PASS")
@@ -303,7 +307,10 @@ def update_config_loop():
             print(f"[cfg] 拉取配置失败: {e}", flush=True)
             if realtime_channel and realtime_channel.connected:
                 realtime_channel.send({"success": False, "error": str(e)[:500], "applied_at": int(time.time() * 1000)}, "config.result")
-        config_wakeup.wait(timeout=REALTIME_HTTP_INTERVAL if realtime_channel and realtime_channel.connected else 300)
+        if proxy_low_power:
+            config_wakeup.wait(timeout=1800)
+        else:
+            config_wakeup.wait(timeout=REALTIME_HTTP_INTERVAL if realtime_channel and realtime_channel.connected else 600)
 
 def c2_heartbeat_loop():
     global public_ip, PROXY_PORT, tun_main, tun_backup, last_http_report
@@ -329,19 +336,21 @@ def c2_heartbeat_loop():
             fallback_ready = not realtime_channel or not realtime_channel.enabled or time.time() - (realtime_channel.last_disconnected or realtime_channel.started_at) >= 30
             if realtime_channel and realtime_channel.enabled and not websocket_sent and time.time() - realtime_channel.last_disconnected < 30:
                 fallback_ready = False
-            if (websocket_sent and time.time() - last_http_report >= REALTIME_HTTP_INTERVAL) or (not websocket_sent and fallback_ready):
+            if (not proxy_low_power and ((websocket_sent and time.time() - last_http_report >= REALTIME_HTTP_INTERVAL) or (not websocket_sent and fallback_ready))):
                 c2_request(f"{C2_URL}{C2_API_PREFIX}/report", data=json.dumps(status).encode('utf-8'), method='POST')
                 last_http_report = time.time()
         except Exception as error:
             print(f"[c2] 状态上报失败: {error}", flush=True)
-        if realtime_channel and realtime_channel.connected:
+        if proxy_low_power:
+            interval = 1800
+        elif realtime_channel and realtime_channel.connected:
             interval = realtime_status_interval
         elif realtime_channel and realtime_channel.enabled and not realtime_channel.ever_connected and time.time() - realtime_channel.started_at < 30:
             interval = max(1, 30 - (time.time() - realtime_channel.started_at))
         elif realtime_channel and realtime_channel.ever_connected and time.time() - realtime_channel.last_disconnected < 30:
             interval = max(1, 30 - (time.time() - realtime_channel.last_disconnected))
         else:
-            interval = 300
+            interval = 600
         heartbeat_wakeup.wait(timeout=interval)
         heartbeat_wakeup.clear()
 

@@ -841,7 +841,24 @@ async function proxyLocal(method, subPath, req, env, body = null) {
     const url = new URL(req.url);
     const proxyUser = env.PROXY_USER || '';
     const proxyPass = env.PROXY_PASS || '';
-    if (!proxyUser || !proxyPass) return Response.json({ error: 'PROXY_USER and PROXY_PASS must be configured' }, { status: 503 });
+    if (!proxyUser || !proxyPass) {
+        // 未配置住宅代理账号：让 config 返回 enabled:false，VPS 端进入低功耗模式
+        // （停止轮询/上报，节省 Worker 额度）。其余端点仍拒绝。
+        if (subPath === 'config' && method === 'GET') {
+            const requestIp = url.searchParams.get('ip');
+            const row = requestIp
+                ? await db.prepare("SELECT value FROM probe_settings WHERE key = ?").bind(`proxy_slot_map_${requestIp}`).first()
+                : null;
+            const globalRow = row || await db.prepare("SELECT value FROM probe_settings WHERE key = 'proxy_slot_map'").first();
+            let slotMap = { "0": "JP", "port": 7920 };
+            if (globalRow && globalRow.value) {
+                try { slotMap = JSON.parse(globalRow.value); } catch (e) {}
+            }
+            const rawCountry = (slotMap["0"] || slotMap.country || "JP").toString().toUpperCase();
+            return new Response(JSON.stringify({ ...slotMap, "0": rawCountry, "port": slotMap.port || 7920, "country": rawCountry, switch_trigger: slotMap.switch_trigger || 0, proxy: { enabled: false, port: slotMap.port || 7920, user: '', pass: '', country: rawCountry } }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'Expires': '0' } });
+        }
+        return Response.json({ error: 'PROXY_USER and PROXY_PASS must be configured' }, { status: 503 });
+    }
 
     if (subPath === 'config') {
         if (method === 'GET') {

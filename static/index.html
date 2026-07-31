@@ -1729,6 +1729,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                             body: JSON.stringify({ ip, enabled: !currentState, port: proxyConfig.port, country: proxyConfig.country, mesh: proxyConfig.mesh })
                         });
                         alert(`✅ 节点 ${ip} 代理已${currentState ? '关闭' : '开启'}！`);
+                        notifyRealtime(ip);
                         loadProxyPool();
                     } catch (e) {
                         alert('❌ 代理开关切换失败: ' + e.message);
