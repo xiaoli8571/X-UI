@@ -14,8 +14,17 @@
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/tweetnacl@1.0.3/nacl-fast.min.js"></script>
+    <script>
+        if (!window.nacl) document.write('<script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js"><\/script>');
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script>
+        if (!window.echarts) document.write('<script src="https://unpkg.com/echarts@5.5.0/dist/echarts.min.js"><\/script>');
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <script>
+        if (!window.QRious) document.write('<script src="https://unpkg.com/qrious@4.0.2/dist/qrious.min.js"><\/script>');
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1040,7 +1049,18 @@
             throw new Error('Vue failed to load from both CDNs');
         }
         const { createApp, ref, reactive, onMounted, onUnmounted, nextTick, computed, watch } = Vue;
-        
+
+        // 移动端兼容垫片：旧浏览器 / 微信 X5 内核不支持 crypto.randomUUID
+        if (crypto && typeof crypto.randomUUID !== 'function') {
+            crypto.randomUUID = function () {
+                const b = crypto.getRandomValues(new Uint8Array(16));
+                b[6] = (b[6] & 0x0f) | 0x40;
+                b[8] = (b[8] & 0x3f) | 0x80;
+                const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+                return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+            };
+        }
+
         const sha256 = async (text) => { const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)); return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''); };
         const generateHMAC = async (keyHex, message) => { const keyBytes = new Uint8Array(keyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16))); const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]); const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message)); return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join(''); };
         const signedAuthHeader = async (keyHex, username, method, path) => { const timestamp = Date.now().toString(); const nonce = crypto.randomUUID(); const signature = await generateHMAC(keyHex, `${username}\n${timestamp}\n${nonce}\n${method}\n${new URL(path, location.origin).pathname}`); return `${btoa(username)}.${timestamp}.${nonce}.${signature}`; };
@@ -1593,7 +1613,31 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     return link;
                 };
                 
-                const copyCommand = (txt, msg) => navigator.clipboard.writeText(txt).then(() => alert(msg));
+                const copyCommand = (txt, msg) => {
+                    const legacyCopy = () => {
+                        try {
+                            const ta = document.createElement('textarea');
+                            ta.value = txt;
+                            ta.setAttribute('readonly', '');
+                            ta.style.position = 'fixed';
+                            ta.style.left = '-9999px';
+                            document.body.appendChild(ta);
+                            ta.focus();
+                            ta.select();
+                            const ok = document.execCommand('copy');
+                            document.body.removeChild(ta);
+                            if (ok) { alert(msg); return true; }
+                        } catch (e) {}
+                        return false;
+                    };
+                    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                        navigator.clipboard.writeText(txt).then(() => alert(msg)).catch(() => {
+                            if (!legacyCopy()) alert('复制失败，请长按手动复制：\n' + txt);
+                        });
+                    } else if (!legacyCopy()) {
+                        alert('复制失败，请长按手动复制：\n' + txt);
+                    }
+                };
 
                 const showQrCode = (text) => {
                     try {
