@@ -39,7 +39,7 @@ WEB_USER = env_secret("WEB_USER", "admin")
 WEB_PASS = env_secret("WEB_PASS")
 AGENT_TOKEN = os.environ.get("AGENT_TOKEN", "")
 if not AGENT_TOKEN:
-    try: AGENT_TOKEN = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "kui", "config.json"))).get("token", "")
+    try: AGENT_TOKEN = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "xui", "config.json"))).get("token", "")
     except Exception: pass
 VPS_IP = os.environ.get("VPS_IP", "")
 
@@ -115,7 +115,7 @@ def get_public_ip():
 
 def get_c2_headers():
     if AGENT_TOKEN:
-        return {"User-Agent": "KUI-Residential-Agent/2.0", "Authorization": AGENT_TOKEN}
+        return {"User-Agent": "XUI-Residential-Agent/2.0", "Authorization": AGENT_TOKEN}
     auth_ptr = base64.b64encode(f"{WEB_USER}:{WEB_PASS}".encode()).decode()
     return {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -137,7 +137,7 @@ def c2_request(url, *, data=None, method=None):
 
 def check_for_updates():
     global last_update_check
-    if os.environ.get("KUI_DISABLE_AUTO_UPDATE") == "1":
+    if os.environ.get("XUI_DISABLE_AUTO_UPDATE") == "1":
         return
     now = time.time()
     if not AGENT_TOKEN or now - last_update_check < 3600:

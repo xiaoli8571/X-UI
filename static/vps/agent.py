@@ -32,11 +32,11 @@ if sys.stdout.encoding != 'UTF-8':
     try: sys.stdout.reconfigure(encoding='utf-8')
     except Exception: pass
 
-CONF_FILE = "/opt/kui/config.json"
+CONF_FILE = "/opt/xui/config.json"
 SINGBOX_CONF_PATH = "/etc/sing-box/config.json"
-WARP_CONF_PATH = "/opt/kui/warp.json"
-WARP_STATE_PATH = "/opt/kui/egress-state.json"
-TRAFFIC_STATE_PATH = "/opt/kui/traffic-state.json"
+WARP_CONF_PATH = "/opt/xui/warp.json"
+WARP_STATE_PATH = "/opt/xui/egress-state.json"
+TRAFFIC_STATE_PATH = "/opt/xui/traffic-state.json"
 WGCF_VERSION = "2.2.31"
 WGCF_ASSETS = {
     "x86_64": ("amd64", "69147e1a517c66129edd8ac8cb60484d6c9515178d7b4a2f95e3c925f225572a"),
@@ -60,14 +60,14 @@ REPORT_URL = env["report_url"]
 VPS_IP = env["ip"]
 TOKEN = env["token"]
 
-HEADERS = {'Content-Type': 'application/json', 'Authorization': TOKEN, 'User-Agent': 'KUI-Unified-Agent/2.0'}
+HEADERS = {'Content-Type': 'application/json', 'Authorization': TOKEN, 'User-Agent': 'XUI-Unified-Agent/2.0'}
 
 # 🌟 住宅IP代理：凭证与端口统一取自环境变量（与 Pages 端 PROXY_USER/PROXY_PASS/PROXY_PORT 保持一致）
 PROXY_USER = os.environ.get("PROXY_USER", "")
 PROXY_PASS = os.environ.get("PROXY_PASS", "")
 PROXY_PORT = int(os.environ.get("PROXY_PORT", "7920"))
 BASE_URL = API_URL.rsplit('/api/', 1)[0] if '/api/' in API_URL else API_URL
-# 住宅IP代理后端：默认与 KUI 同域；独立部署 Free-Residential-IP-Proxy-Controller 时，
+# 住宅IP代理后端：默认与 XUI 同域；独立部署 Free-Residential-IP-Proxy-Controller 时，
 # 通过环境变量 PROXY_API_URL 或 config.json 的 proxy_api 指向其地址。
 PROXY_API = os.environ.get("PROXY_API_URL") or (env.get("proxy_api") if isinstance(env, dict) else None) or BASE_URL
 
@@ -145,13 +145,13 @@ def _ensure_wgcf():
     if not asset:
         raise RuntimeError(f"WARP registration is unsupported on {machine}")
     arch, expected = asset
-    target = "/opt/kui/wgcf"
+    target = "/opt/xui/wgcf"
     if os.path.exists(target):
         with open(target, "rb") as binary:
             if hashlib.sha256(binary.read()).hexdigest() == expected: return target
     url = f"https://github.com/ViRb3/wgcf/releases/download/v{WGCF_VERSION}/wgcf_{WGCF_VERSION}_linux_{arch}"
     temp_path = target + ".tmp"
-    request = urllib.request.Request(url, headers={"User-Agent": "KUI-WARP/1.0"})
+    request = urllib.request.Request(url, headers={"User-Agent": "XUI-WARP/1.0"})
     with urllib.request.urlopen(request, timeout=60) as response:
         source = response.read(20 * 1024 * 1024)
     if hashlib.sha256(source).hexdigest() != expected:
@@ -178,7 +178,7 @@ def _load_or_create_warp_profile():
         except Exception:
             pass
     wgcf = _ensure_wgcf()
-    workdir = tempfile.mkdtemp(prefix="kui-warp-", dir="/opt/kui")
+    workdir = tempfile.mkdtemp(prefix="xui-warp-", dir="/opt/xui")
     try:
         registered = None
         for attempt in range(5):
@@ -218,7 +218,7 @@ def _load_or_create_warp_profile():
         }
         if not ipv4_address or not ipv6_address:
             raise RuntimeError("WARP registration did not return dual-stack addresses")
-        descriptor, temp_profile = tempfile.mkstemp(prefix="warp.", suffix=".tmp", dir="/opt/kui")
+        descriptor, temp_profile = tempfile.mkstemp(prefix="warp.", suffix=".tmp", dir="/opt/xui")
         with os.fdopen(descriptor, "w", encoding="utf-8") as profile_file:
             json.dump(profile, profile_file)
             profile_file.flush()
@@ -240,7 +240,7 @@ def _load_warp_state():
         return {"applied_mode": "native", "applied_revision": 0, "pending_result": None}
 
 def _save_warp_state(mode, revision, pending_result=None):
-    descriptor, temp_path = tempfile.mkstemp(prefix="warp-state.", suffix=".tmp", dir="/opt/kui")
+    descriptor, temp_path = tempfile.mkstemp(prefix="warp-state.", suffix=".tmp", dir="/opt/xui")
     with os.fdopen(descriptor, "w", encoding="utf-8") as state_file:
         json.dump({"applied_mode": mode, "applied_revision": int(revision), "pending_result": pending_result}, state_file)
         state_file.flush(); os.fsync(state_file.fileno())
@@ -331,7 +331,7 @@ def _post_warp_result(payload):
 
 def check_for_update():
     global last_update_check
-    if os.environ.get("KUI_DISABLE_AUTO_UPDATE") == "1":
+    if os.environ.get("XUI_DISABLE_AUTO_UPDATE") == "1":
         return False
     now = time.time()
     if now - last_update_check < 21600:
@@ -375,7 +375,7 @@ def check_for_update():
             for target, backup in reversed(replaced):
                 if os.path.exists(backup): shutil.copy2(backup, target)
             raise
-        _write_json_state("/opt/kui/.update-pending", {"updated_at": int(time.time()), "deadline_at": int(time.time()) + 120, "files": [target for _, target in changed]})
+        _write_json_state("/opt/xui/.update-pending", {"updated_at": int(time.time()), "deadline_at": int(time.time()) + 120, "files": [target for _, target in changed]})
         print("[agent] components updated, restarting", flush=True)
         os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
     except Exception as error:
@@ -563,7 +563,7 @@ def get_port_traffic(port, protocol="tcp", node_id=None):
         try:
             req = urllib.request.Request(
                 f"http://127.0.0.1:9090/stats/inbound/{node_tag}",
-                headers={"User-Agent": "KUI-Agent"}
+                headers={"User-Agent": "XUI-Agent"}
             )
             with urllib.request.urlopen(req, timeout=2) as r:
                 raw = r.read().decode("utf-8")
@@ -725,7 +725,7 @@ def process_argo_nodes(configs):
             if not ensure_cloudflared():
                 continue
             cmd = ["/usr/local/bin/cloudflared", "tunnel", "--edge-ip-version", "auto", "--no-autoupdate", "--url", f"http://[::1]:{port}"]
-            log_path = f"/opt/kui/argo_{port}.log"
+            log_path = f"/opt/xui/argo_{port}.log"
             log_file = open(log_path, "w+")
             p = subprocess.Popen(cmd, stderr=log_file, stdout=subprocess.DEVNULL, text=True)
             url = None; start_t = time.time()
@@ -809,11 +809,11 @@ def build_singbox_config(nodes, proxy_cfg=None, peers=None, mesh=None, socks5_ou
         clean_uuid = node.get('uuid', '').replace('-', '')
         
         if proto in ["Hysteria2", "TUIC", "Trojan", "VLESS-WS-TLS", "AnyTLS", "Naive"]:
-            cert_path, key_path = f"/opt/kui/cert_{node['id']}.pem", f"/opt/kui/key_{node['id']}.pem"
+            cert_path, key_path = f"/opt/xui/cert_{node['id']}.pem", f"/opt/xui/key_{node['id']}.pem"
             active_certs.extend([f"cert_{node['id']}.pem", f"key_{node['id']}.pem"])
             if not os.path.exists(cert_path):
                 parts = sni.split('.'); cn = f"{parts[-2]}.{parts[-1]}" if len(parts) >= 2 else sni
-                conf_path = f"/opt/kui/cert_{node['id']}.conf"
+                conf_path = f"/opt/xui/cert_{node['id']}.conf"
                 with open(conf_path, "w") as f: f.write(f"[req]\ndistinguished_name = req_distinguished_name\nx509_extensions = v3_req\nprompt = no\n[req_distinguished_name]\nCN = {cn}\n[v3_req]\nsubjectAltName = @alt_names\n[alt_names]\nDNS = {sni}\n")
                 subprocess.run(["openssl", "ecparam", "-genkey", "-name", "prime256v1", "-out", key_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(["openssl", "req", "-new", "-x509", "-days", "36500", "-key", key_path, "-out", cert_path, "-config", conf_path, "-extensions", "v3_req"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1063,9 +1063,9 @@ def build_singbox_config(nodes, proxy_cfg=None, peers=None, mesh=None, socks5_ou
     elif socks5_outbound and socks5_outbound.get("source") == "manual": _verify_socks5_exit()
     elif warp_mode != "off": _verify_warp_exit(warp_mode)
     else: _verify_native_exit()
-    for filename in os.listdir("/opt/kui/"):
+    for filename in os.listdir("/opt/xui/"):
         if (filename.startswith("cert_") or filename.startswith("key_")) and filename.endswith(".pem") and filename not in active_certs:
-            try: os.remove(os.path.join("/opt/kui/", filename))
+            try: os.remove(os.path.join("/opt/xui/", filename))
             except OSError: pass
 
 def report_status(current_nodes, argo_urls, force_http=False, allow_http=True):
@@ -1391,14 +1391,14 @@ if __name__ == "__main__":
 
     time.sleep(2)
     initial_nodes = fetch_and_apply_configs()
-    if os.path.exists("/opt/kui/.update-pending"):
+    if os.path.exists("/opt/xui/.update-pending"):
         if initial_nodes is None or not _singbox_service_healthy() or not report_status(list(initial_nodes), [], force_http=True):
             print("[agent] updated version failed readiness checks", flush=True)
             raise SystemExit(1)
-        try: os.remove("/opt/kui/.update-pending")
+        try: os.remove("/opt/xui/.update-pending")
         except FileNotFoundError: pass
     if initial_nodes is not None: heartbeat_state["nodes"] = initial_nodes
-    threading.Thread(target=heartbeat_loop, name="kui-heartbeat", daemon=True).start()
+    threading.Thread(target=heartbeat_loop, name="xui-heartbeat", daemon=True).start()
     while True:
         config_wakeup.clear()
         while realtime_channel and realtime_channel.enabled and not realtime_channel.connected:

@@ -1,5 +1,5 @@
 {
-  "name": "kui-worker",
+  "name": "xui-worker",
   "private": true,
   "type": "module",
   "scripts": {

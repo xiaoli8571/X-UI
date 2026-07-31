@@ -49,7 +49,7 @@ function isAllowedPagesOrigin(origin, env) {
 }
 
 function requestPagesOrigin(request, env) {
-  const candidates = [request.headers.get("X-KUI-Pages-Origin"), request.headers.get("Origin")].filter(Boolean);
+  const candidates = [request.headers.get("X-XUI-Pages-Origin"), request.headers.get("Origin")].filter(Boolean);
   return candidates.find(origin => isAllowedPagesOrigin(origin, env)) || "";
 }
 
@@ -143,7 +143,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(request, env) });
-    if (url.pathname === "/health") return json({ ok: true, service: "kui-realtime", version: 1 }, 200, cors(request, env));
+    if (url.pathname === "/health") return json({ ok: true, service: "xui-realtime", version: 1 }, 200, cors(request, env));
 
     if (url.pathname === "/agent/ws") {
       if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") return json({ error: "WebSocket required" }, 426);
@@ -154,13 +154,13 @@ export default {
       const name = await presenceName(ip, env);
       if (!name) return json({ error: "VPS not found" }, 404);
       const stub = env.VPS_PRESENCE.get(env.VPS_PRESENCE.idFromName(name));
-      return stub.fetch(doRequest("/ws", request, { "X-KUI-IP": ip, "X-KUI-ROLE": role }));
+      return stub.fetch(doRequest("/ws", request, { "X-XUI-IP": ip, "X-XUI-ROLE": role }));
     }
 
     if (url.pathname === "/dashboard/ticket" && request.method === "POST") {
       if (!(await verifyAdmin(request.headers.get("Authorization"), request, env))) return json({ error: "Forbidden" }, 403, cors(request, env));
       const hub = env.DASHBOARD_HUB.get(env.DASHBOARD_HUB.idFromName("main"));
-      const response = await hub.fetch(new Request("https://hub.internal/ticket", { method: "POST", headers: { "X-KUI-USER": "admin" } }));
+      const response = await hub.fetch(new Request("https://hub.internal/ticket", { method: "POST", headers: { "X-XUI-USER": "admin" } }));
       return new Response(response.body, { status: response.status, headers: { ...Object.fromEntries(response.headers), ...cors(request, env) } });
     }
 
@@ -177,7 +177,7 @@ export default {
       const setting = await env.DB.prepare("SELECT value FROM probe_settings WHERE key = 'is_public'").first();
       if (setting && setting.value !== "true") return json({ error: "Private dashboard" }, 403);
       const hub = env.DASHBOARD_HUB.get(env.DASHBOARD_HUB.idFromName("main"));
-      return hub.fetch(doRequest("/public-ws", request, { "X-KUI-CLIENT-IP": request.headers.get("CF-Connecting-IP") || "unknown" }));
+      return hub.fetch(doRequest("/public-ws", request, { "X-XUI-CLIENT-IP": request.headers.get("CF-Connecting-IP") || "unknown" }));
     }
 
     if (url.pathname === "/dashboard/snapshot") {
@@ -204,7 +204,7 @@ export default {
       if (!(await verifyAdmin(request.headers.get("Authorization"), request, env))) return json({ error: "Forbidden" }, 403, cors(request, env));
       const body = await request.json().catch(() => ({}));
       const hub = env.DASHBOARD_HUB.get(env.DASHBOARD_HUB.idFromName("main"));
-      const response = await hub.fetch(new Request("https://hub.internal/public-policy", { method: "POST", headers: { "X-KUI-Public": body.public === true ? "1" : "0" } }));
+      const response = await hub.fetch(new Request("https://hub.internal/public-policy", { method: "POST", headers: { "X-XUI-Public": body.public === true ? "1" : "0" } }));
       return new Response(response.body, { status: response.status, headers: { ...Object.fromEntries(response.headers), ...cors(request, env) } });
     }
 
@@ -247,8 +247,8 @@ export class VpsPresence extends DurableObject {
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/ws") {
-      const ip = request.headers.get("X-KUI-IP") || "";
-      const role = request.headers.get("X-KUI-ROLE") || "";
+      const ip = request.headers.get("X-XUI-IP") || "";
+      const role = request.headers.get("X-XUI-ROLE") || "";
       for (const existing of this.ctx.getWebSockets(role)) {
         try { existing.close(1000, "replaced"); } catch {}
       }
@@ -277,7 +277,7 @@ export class VpsPresence extends DurableObject {
       return json({ success: true });
     }
     if (url.pathname === "/dashboard-active" && request.method === "POST") {
-      this.setDashboardActivity(request.headers.get("X-KUI-Active") === "1", Number(request.headers.get("X-KUI-Interval")) || IDLE_STATUS_INTERVAL, Number(request.headers.get("X-KUI-Until")) || Date.now() + 300000);
+      this.setDashboardActivity(request.headers.get("X-XUI-Active") === "1", Number(request.headers.get("X-XUI-Interval")) || IDLE_STATUS_INTERVAL, Number(request.headers.get("X-XUI-Until")) || Date.now() + 300000);
       return json({ success: true });
     }
     if (url.pathname === "/snapshot") return json(this.publicSnapshot());
@@ -424,7 +424,7 @@ export class VpsPresence extends DurableObject {
     if (!this.dashboardActive) return;
     await hub.fetch(new Request("https://hub.internal/update", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-KUI-Presence": "1" },
+      headers: { "Content-Type": "application/json", "X-XUI-Presence": "1" },
       body: JSON.stringify(this.publicSnapshot()),
     }));
   }
@@ -452,7 +452,7 @@ export class DashboardHub extends DurableObject {
     const url = new URL(request.url);
     if (url.pathname === "/ticket" && request.method === "POST") {
       const ticket = crypto.randomUUID();
-      await this.ctx.storage.put(`ticket:${ticket}`, { user: request.headers.get("X-KUI-USER") || "", expires: Date.now() + 60000 });
+      await this.ctx.storage.put(`ticket:${ticket}`, { user: request.headers.get("X-XUI-USER") || "", expires: Date.now() + 60000 });
       await this.ctx.storage.setAlarm(Date.now() + 65000);
       return json({ ticket, expires_in: 60 });
     }
@@ -480,7 +480,7 @@ export class DashboardHub extends DurableObject {
       return new Response(null, { status: 101, webSocket: client });
     }
     if (url.pathname === "/public-ws") {
-      const clientIp = request.headers.get("X-KUI-CLIENT-IP") || "unknown";
+      const clientIp = request.headers.get("X-XUI-CLIENT-IP") || "unknown";
       const publicSockets = this.ctx.getWebSockets("public");
       if (publicSockets.length >= MAX_PUBLIC_SOCKETS || publicSockets.filter(ws => ws.deserializeAttachment()?.clientIp === clientIp).length >= MAX_PUBLIC_SOCKETS_PER_IP) return json({ error: "Too many public connections" }, 429);
       const pair = new WebSocketPair();
@@ -493,7 +493,7 @@ export class DashboardHub extends DurableObject {
       return new Response(null, { status: 101, webSocket: client });
     }
     if (url.pathname === "/public-policy" && request.method === "POST") {
-      const enabled = request.headers.get("X-KUI-Public") === "1";
+      const enabled = request.headers.get("X-XUI-Public") === "1";
       if (!enabled) {
         for (const ws of this.ctx.getWebSockets("public")) {
           try { ws.close(1008, "private dashboard"); } catch {}
@@ -510,7 +510,7 @@ export class DashboardHub extends DurableObject {
       return json({ success: true, policy: { admin: policy.admin / 1000, public: policy.public / 1000, idle: policy.idle / 1000 } });
     }
     if (url.pathname === "/update" && request.method === "POST") {
-      if (request.headers.get("X-KUI-Presence") !== "1") return json({ error: "Forbidden" }, 403);
+      if (request.headers.get("X-XUI-Presence") !== "1") return json({ error: "Forbidden" }, 403);
       const snapshot = await request.json();
       if (!snapshot.ip) return json({ error: "Invalid snapshot" }, 400);
       const payload = JSON.stringify({ type: "patch", data: snapshot, ts: Date.now() });
@@ -619,7 +619,7 @@ export class DashboardHub extends DurableObject {
       const name = await presenceName(ip, this.env);
       if (!name) return;
       const presence = this.env.VPS_PRESENCE.get(this.env.VPS_PRESENCE.idFromName(name));
-      return presence.fetch(new Request("https://presence.internal/dashboard-active", { method: "POST", headers: { "X-KUI-Active": active ? "1" : "0", "X-KUI-Interval": String(interval), "X-KUI-Until": String(until) } }));
+      return presence.fetch(new Request("https://presence.internal/dashboard-active", { method: "POST", headers: { "X-XUI-Active": active ? "1" : "0", "X-XUI-Interval": String(interval), "X-XUI-Until": String(until) } }));
     }));
   }
 

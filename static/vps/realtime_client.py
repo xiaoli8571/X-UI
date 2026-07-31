@@ -42,7 +42,7 @@ class RealtimeChannel:
         if not self.enabled or (self._thread and self._thread.is_alive()):
             return
         self.started_at = time.time()
-        self._thread = threading.Thread(target=self._run, name=f"kui-realtime-{self.role}", daemon=True)
+        self._thread = threading.Thread(target=self._run, name=f"xui-realtime-{self.role}", daemon=True)
         self._thread.start()
 
     def stop(self):

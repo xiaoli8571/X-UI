@@ -1,14 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kui",
+  "name": "xui",
   "main": "src/worker.js",
   "compatibility_date": "2026-07-15",
   "workers_dev": true,
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ADMIN_PASSWORD": "admin",
-    "PROXY_USER": "kui",
-    "PROXY_PASS": "kui"
+    "PROXY_USER": "xui",
+    "PROXY_PASS": "xui"
   },
   "assets": {
     "directory": "static",

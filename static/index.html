@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>KUI x Server Monitor</title>
+    <title>XUI x Server Monitor</title>
     
     <script src="https://unpkg.com/vue@3.5.17/dist/vue.global.prod.js"></script>
     <script>
@@ -147,7 +147,7 @@
         .theme5 .probe-stat-subtext { color: rgba(255,255,255,0.6); }
         .theme5 #map-container { background-color: #0d1117; border-color: #30363d; background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); }
 
-        /* Cloud themes before the KUI integration use these legacy card wrappers. */
+        /* Cloud themes before the XUI integration use these legacy card wrappers. */
         .stats-row { display: contents; }
         .theme12 .card-left, .theme12 .card-right { display: contents !important; }
 
@@ -160,12 +160,12 @@
         .pc-body::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 1); }
         .pc-body input[type=number]::-webkit-inner-spin-button,
         .pc-body input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .kui-tab-strip { -ms-overflow-style: none; scrollbar-width: none; scroll-snap-type: x proximity; }
-        .kui-tab-strip::-webkit-scrollbar { display: none; }
-        .kui-tab-button { scroll-snap-align: start; }
+        .xui-tab-strip { -ms-overflow-style: none; scrollbar-width: none; scroll-snap-type: x proximity; }
+        .xui-tab-strip::-webkit-scrollbar { display: none; }
+        .xui-tab-button { scroll-snap-align: start; }
         @media (min-width: 1024px) {
-            .kui-tab-strip { overflow-x: visible !important; }
-            .kui-admin-tab { flex: 1 1 0; min-width: 0; padding-left: .5rem !important; padding-right: .5rem !important; font-size: .75rem !important; }
+            .xui-tab-strip { overflow-x: visible !important; }
+            .xui-admin-tab { flex: 1 1 0; min-width: 0; padding-left: .5rem !important; padding-right: .5rem !important; font-size: .75rem !important; }
         }
     </style>
 </head>
@@ -205,8 +205,8 @@
                             <button class="probe-toggle-btn toggle-btn" :class="{active: probeView === 'table'}" @click="setProbeView('table')">表格</button>
                             <button class="probe-toggle-btn toggle-btn" :class="{active: probeView === 'map'}" @click="setProbeView('map')">地图</button>
                         </div>
-                        <button v-if="!isLoggedIn" @click="showLoginModal = true" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-bold text-sm shadow-md hover:opacity-90">👨‍💻 KUI 管理面板</button>
-                        <button v-else @click="activeTab = (role === 'admin' ? 'nodes' : 'dashboard')" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg font-bold text-sm shadow-md hover:opacity-90">返回 KUI 面板</button>
+                        <button v-if="!isLoggedIn" @click="showLoginModal = true" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-bold text-sm shadow-md hover:opacity-90">👨‍💻 XUI 管理面板</button>
+                        <button v-else @click="activeTab = (role === 'admin' ? 'nodes' : 'dashboard')" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg font-bold text-sm shadow-md hover:opacity-90">返回 XUI 面板</button>
                     </div>
                 </div>
 
@@ -358,7 +358,7 @@
                 
                 <div class="text-center mt-10 pb-5 text-sm opacity-80 card-meta">
                     <div class="mb-2"><span class="mr-4">👁️ 历史总访问：<b class="text-blue-500 stat-val">{{ probeSys.visits_total || 0 }}</b> 次</span><span>🔥 今日访问：<b class="text-emerald-500 stat-val">{{ probeSys.visits_today || 0 }}</b> 次</span></div>
-                    Powered by KUI Core x CF-Server-Monitor-Pro
+                    Powered by XUI Core x CF-Server-Monitor-Pro
                 </div>
             </div>
         </div>
@@ -371,7 +371,7 @@
                         {{ siteTitle || 'Cluster Gateway' }}
                     </h1>
                     <div class="hidden md:block w-px h-6 bg-slate-300"></div>
-                    <a href="https://github.com/a62169722/KUI" target="_blank" class="bg-white/60 hover:bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-slate-900 transition-all shadow-sm">🐙 Github仓库</a>
+                    <a href="https://github.com/a62169722/XUI" target="_blank" class="bg-white/60 hover:bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-slate-900 transition-all shadow-sm">🐙 Github仓库</a>
                 </div>
                 <div class="flex flex-wrap justify-center lg:justify-end items-center gap-2 w-full lg:w-auto">
                     <span class="text-[10px] md:text-xs font-bold text-emerald-500 bg-emerald-100/50 px-3 py-2 rounded-full border border-emerald-200 animate-pulse">🟢 实时监控中</span>
@@ -384,16 +384,16 @@
             </div>
 
             <div class="flex justify-center mb-4 px-2">
-                <div class="kui-tab-strip w-full max-w-full overflow-x-auto bg-slate-200/50 p-1.5 rounded-full flex flex-nowrap justify-start lg:justify-center gap-1 backdrop-blur-sm border border-white/50 shadow-inner">
+                <div class="xui-tab-strip w-full max-w-full overflow-x-auto bg-slate-200/50 p-1.5 rounded-full flex flex-nowrap justify-start lg:justify-center gap-1 backdrop-blur-sm border border-white/50 shadow-inner">
                     <template v-if="role === 'admin'">
-                        <button @click="activeTab = 'nodes'" :class="activeTab === 'nodes' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">服务器与节点</button>
-                        <button @click="activeTab = 'users'" :class="activeTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">用户与授权</button>
-                        <button @click="activeTab = 'proxy'" :class="activeTab === 'proxy' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🌐 住宅IP代理</button>
-                        <button @click="activeTab = 'realm'" :class="activeTab === 'realm' ? 'bg-white text-cyan-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🔀 Realm中转</button>
-                        <button @click="activeTab = 'services'" :class="activeTab === 'services' ? 'bg-white text-violet-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🧩 第三方服务</button>
-                        <button @click="activeTab = 'thirdparty'" :class="activeTab === 'thirdparty' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🔗 第三方订阅</button>
-                        <button @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">⚙️ 系统设置</button>
-                        <button @click="activeTab = 'probe'; probeDetailId = null;" class="kui-tab-button kui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm text-emerald-600 hover:bg-emerald-50 shadow-sm border border-transparent hover:border-emerald-200">🌐 探针全景大盘</button>
+                        <button @click="activeTab = 'nodes'" :class="activeTab === 'nodes' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">服务器与节点</button>
+                        <button @click="activeTab = 'users'" :class="activeTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">用户与授权</button>
+                        <button @click="activeTab = 'proxy'" :class="activeTab === 'proxy' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🌐 住宅IP代理</button>
+                        <button @click="activeTab = 'realm'" :class="activeTab === 'realm' ? 'bg-white text-cyan-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🔀 Realm中转</button>
+                        <button @click="activeTab = 'services'" :class="activeTab === 'services' ? 'bg-white text-violet-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🧩 第三方服务</button>
+                        <button @click="activeTab = 'thirdparty'" :class="activeTab === 'thirdparty' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">🔗 第三方订阅</button>
+                        <button @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm">⚙️ 系统设置</button>
+                        <button @click="activeTab = 'probe'; probeDetailId = null;" class="xui-tab-button xui-admin-tab shrink-0 whitespace-nowrap px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 rounded-full font-bold transition-all text-[11px] sm:text-xs lg:text-sm text-emerald-600 hover:bg-emerald-50 shadow-sm border border-transparent hover:border-emerald-200">🌐 探针全景大盘</button>
                     </template>
                     <template v-if="role === 'user'">
                         <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="px-6 md:px-8 py-2.5 rounded-full font-bold transition-all text-sm md:text-base">我的主页</button>
@@ -541,7 +541,7 @@
                         <div class="p-4 md:p-6 bg-slate-100/50 border-t border-white flex flex-col gap-3">
                             <div class="bg-slate-800 p-4 rounded-[1.25rem] group shadow-inner transition-colors">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase mb-2 flex justify-between items-center">
-                                    <span>Full Deploy Command · KUI + 住宅双隧道</span>
+                                    <span>Full Deploy Command · XUI + 住宅双隧道</span>
                                     <div class="flex gap-2 text-[9px]">
                                         <label class="cursor-pointer hover:text-white flex items-center gap-1"><input type="radio" v-model="deployOsMap[vps.ip]" @change="saveOsMap" value="debian" class="accent-indigo-500"> Ubuntu/Debian</label>
                                         <label class="cursor-pointer hover:text-white flex items-center gap-1"><input type="radio" v-model="deployOsMap[vps.ip]" @change="saveOsMap" value="alpine" class="accent-indigo-500"> Alpine</label>
@@ -629,7 +629,7 @@
                         <span class="mt-6 inline-flex items-center gap-2 text-sm font-black text-emerald-600">打开服务 <span class="transition-transform group-hover:translate-x-1">→</span></span>
                     </a>
                 </div>
-                <p class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-xs font-medium leading-relaxed text-amber-700">第三方服务与 KUI 无账号、凭据或数据传递关系。使用 WebSSH 时请自行确认服务可信度，并手动填写服务器连接信息。</p>
+                <p class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-xs font-medium leading-relaxed text-amber-700">第三方服务与 XUI 无账号、凭据或数据传递关系。使用 WebSSH 时请自行确认服务可信度，并手动填写服务器连接信息。</p>
             </div>
 
             <div v-if="isLoggedIn && role === 'admin' && activeTab === 'proxy'" class="pc-body min-h-screen bg-[#090E17] text-slate-300 relative overflow-x-hidden selection:bg-indigo-500/30">
@@ -852,7 +852,7 @@
             <div v-if="activeTab === 'settings'" class="space-y-6">
                 <template v-if="role === 'admin'">
                     <div class="bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/40">
-                        <h3 class="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">⚙️ KUI 代理系统参数</h3>
+                        <h3 class="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">⚙️ XUI 代理系统参数</h3>
                         <div class="max-w-md mb-6">
                             <label class="block text-xs font-bold text-slate-400 mb-2 pl-2">控制面板全局名称</label>
                             <div class="flex gap-3"><input v-model="siteTitleInput" placeholder="Cluster Gateway" class="w-full bg-white/50 border border-white p-3 rounded-2xl transition hover:bg-white focus:bg-white text-sm font-medium"><button @click="saveSiteTitle" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-md whitespace-nowrap">保存更改</button></div>
@@ -947,7 +947,7 @@
 
                     <div class="bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/40">
                         <h3 class="text-xl font-black text-slate-800 mb-2 flex items-center gap-2">💻 探针服务端管理</h3>
-                        <p class="text-sm text-slate-500 mb-6 font-medium">提示：探针大盘已与 KUI Agent 深度统一！您在“服务器与节点”页面接入的机器会<b>自动</b>出现在此处。在这里只需维护展示信息即可，无需再次安装脚本。</p>
+                        <p class="text-sm text-slate-500 mb-6 font-medium">提示：探针大盘已与 XUI Agent 深度统一！您在“服务器与节点”页面接入的机器会<b>自动</b>出现在此处。在这里只需维护展示信息即可，无需再次安装脚本。</p>
 
                         <div class="overflow-x-auto bg-white rounded-2xl border border-slate-100 shadow-sm">
                             <table class="w-full text-left border-collapse text-sm">
@@ -1054,7 +1054,7 @@
             setup() {
                 const isLoggedIn = ref(false); const showLoginModal = ref(false); 
                 const loginUser = ref(''); const password = ref('');
-                const currentUser = ref(localStorage.getItem('kui_user') || ''); const authKey = ref(localStorage.getItem('kui_auth_key') || ''); const role = ref(localStorage.getItem('kui_role') || '');
+                const currentUser = ref(localStorage.getItem('xui_user') || ''); const authKey = ref(localStorage.getItem('xui_auth_key') || ''); const role = ref(localStorage.getItem('xui_role') || '');
                 const activeTab = ref(localStorage.getItem('monitor_preferred_tab') || 'probe'); 
                 const currentDomain = window.location.origin;
 
@@ -1068,7 +1068,7 @@
                 const batchStartPort = reactive({}); const batchUser = reactive({}); 
                 const thirdPartySubscriptions = ref([]); const newThirdParty = reactive({ name: '', url: '' }); const loadingThirdParty = ref(false);
                 
-                let initOsMap = {}; try { initOsMap = JSON.parse(localStorage.getItem('kui_deploy_os') || '{}'); } catch(e) {}
+                let initOsMap = {}; try { initOsMap = JSON.parse(localStorage.getItem('xui_deploy_os') || '{}'); } catch(e) {}
                 const deployOsMap = reactive(initOsMap);
 
                 // --- 动态拉取核心 ---
@@ -1100,7 +1100,7 @@
                 
                 const showWelcomePopup = ref(false);
 
-                watch(activeTab, (val) => { localStorage.setItem('monitor_preferred_tab', val); if (val === 'proxy' && isLoggedIn.value) { loadProxyPool(); setTimeout(pcInitProxy, 0); } else { pcStopProxy(); } if (val === 'thirdparty') loadThirdPartySubscriptions(); if (val === 'settings' && isLoggedIn.value && role.value === 'admin') loadAdminProbeServers(); if (val === 'probe') { updateCustomStyles(); updateCustomScript(probeSys.custom_script); } else { document.body.className = ''; document.getElementById('kui-custom-styles')?.remove(); document.getElementById('kui-custom-head')?.remove(); updateCustomScript(''); } });
+                watch(activeTab, (val) => { localStorage.setItem('monitor_preferred_tab', val); if (val === 'proxy' && isLoggedIn.value) { loadProxyPool(); setTimeout(pcInitProxy, 0); } else { pcStopProxy(); } if (val === 'thirdparty') loadThirdPartySubscriptions(); if (val === 'settings' && isLoggedIn.value && role.value === 'admin') loadAdminProbeServers(); if (val === 'probe') { updateCustomStyles(); updateCustomScript(probeSys.custom_script); } else { document.body.className = ''; document.getElementById('xui-custom-styles')?.remove(); document.getElementById('xui-custom-head')?.remove(); updateCustomScript(''); } });
                 watch(probeView, (val) => localStorage.setItem('monitor_preferred_view', val));
 
                 const hasCustomCssFlag = computed(() => {
@@ -1120,7 +1120,7 @@
                 };
 
                 const themeCompatibilityCss = `
-/* KUI compatibility layer for legacy cloud preset themes. */
+/* XUI compatibility layer for legacy cloud preset themes. */
 body.theme2 .probe-body, body.theme5 .probe-body, body.theme7 .probe-body, body.theme10 .probe-body, body.theme15 .probe-body, body.theme18 .probe-body { color: #e5e7eb; }
 body.theme8 .probe-body { color: #fff; }
 body.theme11, body.theme13, body.theme14, body.theme15, body.theme18 { position: relative; isolation: isolate; }
@@ -1173,8 +1173,8 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     if (isLoggedIn.value && activeTab.value !== 'probe') return;
                     document.body.className = probeSys.theme || 'theme1';
 
-                    let styleTag = document.getElementById('kui-custom-styles');
-                    if (!styleTag) { styleTag = document.createElement('style'); styleTag.id = 'kui-custom-styles'; document.head.appendChild(styleTag); }
+                    let styleTag = document.getElementById('xui-custom-styles');
+                    if (!styleTag) { styleTag = document.createElement('style'); styleTag.id = 'xui-custom-styles'; document.head.appendChild(styleTag); }
                     
                     const currentTheme = availableThemes.value.find(t => t.id === probeSys.theme) || availableThemes.value[0];
                     let css = '';
@@ -1188,24 +1188,24 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     if (probeSys.custom_bg) css += `body { background: url('${probeSys.custom_bg}') no-repeat center center fixed !important; background-size: cover !important; } .probe-vps-card, .probe-global-stats, .probe-header-card, .probe-chart-card, .probe-custom-table, .probe-filter-tag, .probe-view-controls { background: rgba(255, 255, 255, 0.4) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border: 1px solid rgba(255, 255, 255, 0.6) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important; color: #111 !important; } .probe-vps-card:hover { background: rgba(255, 255, 255, 0.6) !important; transform: translateY(-3px); } .probe-group-header { color: #fff !important; text-shadow: 0 2px 5px rgba(0,0,0,0.6) !important; border-left-color: #fff !important; } .probe-g-val, .probe-card-title { color: #000 !important; font-weight: 800 !important; } .probe-g-label, .probe-g-sub, .probe-card-meta { color: #333 !important; font-weight: 600 !important; } .probe-stat-bar-full { background: rgba(0,0,0,0.1) !important; }`;
                     styleTag.innerHTML = css;
 
-                    let headWrapper = document.getElementById('kui-custom-head');
+                    let headWrapper = document.getElementById('xui-custom-head');
                     if (probeSys.custom_head) {
-                        if (!headWrapper) { headWrapper = document.createElement('div'); headWrapper.id = 'kui-custom-head'; document.head.appendChild(headWrapper); }
+                        if (!headWrapper) { headWrapper = document.createElement('div'); headWrapper.id = 'xui-custom-head'; document.head.appendChild(headWrapper); }
                         headWrapper.innerHTML = probeSys.custom_head;
                     } else if (headWrapper) headWrapper.remove();
                 };
 
                 const updateCustomScript = (newVal) => {
-                    document.querySelectorAll('[data-kui-custom-script]').forEach(node => node.remove());
-                    let wrapper = document.getElementById('kui-custom-html-wrapper');
+                    document.querySelectorAll('[data-xui-custom-script]').forEach(node => node.remove());
+                    let wrapper = document.getElementById('xui-custom-html-wrapper');
                     if (wrapper) wrapper.remove();
                     if (isLoggedIn.value && activeTab.value !== 'probe') return;
                     if (!newVal) return;
-                    wrapper = document.createElement('div'); wrapper.id = 'kui-custom-html-wrapper'; wrapper.innerHTML = newVal; 
+                    wrapper = document.createElement('div'); wrapper.id = 'xui-custom-html-wrapper'; wrapper.innerHTML = newVal; 
                     const scripts = wrapper.getElementsByTagName('script');
                     for (let i = 0; i < scripts.length; i++) {
                         const newScript = document.createElement('script');
-                        newScript.dataset.kuiCustomScript = 'true';
+                        newScript.dataset.xuiCustomScript = 'true';
                         if (scripts[i].src) newScript.src = scripts[i].src; else newScript.textContent = scripts[i].textContent;
                         document.body.appendChild(newScript);
                     }
@@ -1275,11 +1275,11 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     }
                     return res;
                 };
-                window.kuiAdminAuthHeader = async () => {
+                window.xuiAdminAuthHeader = async () => {
                     if (!authKey.value || !currentUser.value || role.value !== 'admin') return {};
                     return { 'Authorization': `Bearer ${authKey.value}` };
                 };
-                window.kuiManagedServerIps = () => servers.value.map(server => server.ip).filter(Boolean);
+                window.xuiManagedServerIps = () => servers.value.map(server => server.ip).filter(Boolean);
 
                 const login = async () => {
                     if (!loginUser.value) loginUser.value = 'admin';
@@ -1288,7 +1288,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         if (res.ok) {
                             authGeneration++;
                             const data = await res.json(); authKey.value = data.token; currentUser.value = loginUser.value; role.value = data.role;
-                            localStorage.setItem('kui_auth_key', authKey.value); localStorage.setItem('kui_user', currentUser.value); localStorage.setItem('kui_role', role.value);
+                            localStorage.setItem('xui_auth_key', authKey.value); localStorage.setItem('xui_user', currentUser.value); localStorage.setItem('xui_role', role.value);
                             isLoggedIn.value = true; showLoginModal.value = false; password.value = ''; const publicSocket = publicRealtimeSocket; publicRealtimeSocket = null; publicSocket?.close(); clearTimeout(publicRealtimeReconnectTimer); clearTimeout(publicRealtimeFallbackTimer); clearInterval(publicRealtimeActivityTimer);
                             activeTab.value = role.value === 'admin' ? 'nodes' : 'dashboard';
                             startPolling(); fetchProbeData(); queueMicrotask(connectRealtime);
@@ -1296,8 +1296,8 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     } catch (e) { alert('登录异常'); }
                 };
                 
-                const clearPrivateState = () => { servers.value = []; nodes.value = []; users.value = []; groups.value = []; adminProbeServers.value = []; mySubToken.value = ''; probeDetailId.value = null; probeDetail.value = {}; window.kuiRealtimeProxySnapshots = {}; };
-                const logout = () => { authGeneration++; localStorage.removeItem('kui_auth_key'); localStorage.removeItem('kui_user'); localStorage.removeItem('kui_role'); isLoggedIn.value = false; currentUser.value = ''; authKey.value = ''; clearPrivateState(); activeTab.value = 'probe'; realtimeGeneration++; realtimeDisconnectedAt = 0; clearTimeout(realtimeFallbackTimer); clearTimeout(realtimeReconnectTimer); clearTimeout(realtimeConnectTimer); clearInterval(realtimePingTimer); const socket = realtimeSocket; realtimeSocket = null; socket?.close(); realtimeConnected.value = false; window.kuiRealtimeConnected = false; stopPolling(); startProbePolling();};
+                const clearPrivateState = () => { servers.value = []; nodes.value = []; users.value = []; groups.value = []; adminProbeServers.value = []; mySubToken.value = ''; probeDetailId.value = null; probeDetail.value = {}; window.xuiRealtimeProxySnapshots = {}; };
+                const logout = () => { authGeneration++; localStorage.removeItem('xui_auth_key'); localStorage.removeItem('xui_user'); localStorage.removeItem('xui_role'); isLoggedIn.value = false; currentUser.value = ''; authKey.value = ''; clearPrivateState(); activeTab.value = 'probe'; realtimeGeneration++; realtimeDisconnectedAt = 0; clearTimeout(realtimeFallbackTimer); clearTimeout(realtimeReconnectTimer); clearTimeout(realtimeConnectTimer); clearInterval(realtimePingTimer); const socket = realtimeSocket; realtimeSocket = null; socket?.close(); realtimeConnected.value = false; window.xuiRealtimeConnected = false; stopPolling(); startProbePolling();};
                 const sendUiPing = async () => { try { await fetchApi('/api/ui_ping', { method: 'POST' }); } catch(e) {} };
 
                 let mapInitialized = false; let myMap = null; let markersLayer = null; let geoJsonLayer = null; let worldGeoJson = null; let currentMapDataStr = "";
@@ -1354,7 +1354,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const openProbeDetail = async (id) => { probeDetailId.value = id; await nextTick(); initProbeDetailCharts(); fetchProbeData(true); };
 
                 const closePopup = () => {
-                    localStorage.setItem('kui_popup_seen', Date.now().toString());
+                    localStorage.setItem('xui_popup_seen', Date.now().toString());
                     showWelcomePopup.value = false;
                 };
 
@@ -1410,20 +1410,20 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                             if (isLoggedIn.value && role.value === 'admin' && realtimeUrl.value) queueMicrotask(connectRealtime);
                             else if (!isLoggedIn.value && data.settings.is_public === 'true') queueMicrotask(connectPublicRealtime);
                             updateCustomStyles();
-                            if ((!isLoggedIn.value || activeTab.value === 'probe') && probeSys.custom_script && !document.getElementById('kui-custom-html-wrapper')) updateCustomScript(probeSys.custom_script);
+                            if ((!isLoggedIn.value || activeTab.value === 'probe') && probeSys.custom_script && !document.getElementById('xui-custom-html-wrapper')) updateCustomScript(probeSys.custom_script);
                             if (probeView.value === 'map') drawMarkers();
                             if (probeSys.is_public !== 'true' && !isLoggedIn.value) showLoginModal.value = true;
                             
                             // 弹窗逻辑
                             if (probeSys.enable_popup === 'true') {
-                                const lastSeen = localStorage.getItem('kui_popup_seen');
+                                const lastSeen = localStorage.getItem('xui_popup_seen');
                                 if (!lastSeen || Date.now() - parseInt(lastSeen) > 86400000) showWelcomePopup.value = true;
                             }
                         }
                     } catch(e) {} finally { if (!detailRequest) isFetchingProbe = false; }
                 };
 
-                let isFetchingKUI = false;
+                let isFetchingXUI = false;
                 let isLoadingAdminProbeServers = false;
                 const loadAdminProbeServers = async () => {
                     if (isLoadingAdminProbeServers || !isLoggedIn.value || role.value !== 'admin') return;
@@ -1442,7 +1442,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     }
                 };
                 const refreshData = async () => {
-                    if (isFetchingKUI) return; isFetchingKUI = true;
+                    if (isFetchingXUI) return; isFetchingXUI = true;
                     try {
                         const res = await fetchApi('/api/data'); const data = await res.json();
                         const liveByIp = new Map(servers.value.filter(item => item._realtime_ts).map(item => [normalizeRealtimeKey(item.ip), item]));
@@ -1455,15 +1455,15 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                             if(!deployOsMap[s.ip]) deployOsMap[s.ip] = 'debian'; if(!batchStartPort[s.ip]) batchStartPort[s.ip] = ''; if(!batchUser[s.ip]) batchUser[s.ip] = 'admin';
                             if (s.egress_mode === 'socks5' || s.socks5_addr) { s._socks5_addr = s.socks5_addr || ''; s._socks5_port = s.socks5_port || 1080; s._socks5_user = s.socks5_user || ''; s._socks5_pass = s.socks5_pass || ''; }
                         });
-                    if (activeTab.value === 'nodes') renderKUICharts();
+                    if (activeTab.value === 'nodes') renderXUICharts();
                     
                     if (activeTab.value === 'thirdparty') loadThirdPartySubscriptions();
                     
                     if (activeTab.value === 'settings' && role.value === 'admin') loadAdminProbeServers();
-                    } catch(e) {} finally { isFetchingKUI = false; }
+                    } catch(e) {} finally { isFetchingXUI = false; }
                 };
 
-                const renderKUICharts = async () => {
+                const renderXUICharts = async () => {
                     await nextTick();
                     for (let vps of servers.value) {
                         const chartDom = document.getElementById('chart-' + vps.ip); if (!chartDom) continue;
@@ -1578,10 +1578,10 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const getNodesByIp = (ip) => nodes.value.filter(n => n.vps_ip === ip).sort((a, b) => a.port - b.port);
                 const getVpsName = (ip) => servers.value.find(s => s.ip === ip)?.name || ip;
                 
-                const saveOsMap = () => { localStorage.setItem('kui_deploy_os', JSON.stringify(deployOsMap)); };
+                const saveOsMap = () => { localStorage.setItem('xui_deploy_os', JSON.stringify(deployOsMap)); };
                 const generateCmd = (ip) => { const osType = deployOsMap[ip] || 'debian'; const token = servers.value.find(s => s.ip === ip)?.agent_token || ''; if (!token) return '请先刷新页面以签发独立 Agent Token'; const scriptUrl = `${currentDomain}/api/agent_update?ip=${encodeURIComponent(ip)}&component=full-installer`; if (osType === 'alpine') return `apk update && apk add curl && curl -fsSL -H "Authorization: ${token}" "${scriptUrl}" | sh -s -- --api "${currentDomain}" --ip "${ip}" --token "${token}"`; else return `apt-get update -y && apt-get install -y curl && bash <(curl -fsSL -H "Authorization: ${token}" "${scriptUrl}") --api "${currentDomain}" --ip "${ip}" --token "${token}"`; };
 
-                const saveSiteTitle = async () => { if(!siteTitleInput.value) return alert('名称不能为空！'); await fetchApi('/api/settings', { method: 'POST', body: JSON.stringify({ site_title: siteTitleInput.value }) }); siteTitle.value = siteTitleInput.value; alert('✅ KUI 聚合面板名称保存成功！'); };
+                const saveSiteTitle = async () => { if(!siteTitleInput.value) return alert('名称不能为空！'); await fetchApi('/api/settings', { method: 'POST', body: JSON.stringify({ site_title: siteTitleInput.value }) }); siteTitle.value = siteTitleInput.value; alert('✅ XUI 聚合面板名称保存成功！'); };
                 const updateUserPassword = async () => { if(!userNewPassword.value) return alert('请输入新密码'); await fetchApi('/api/user/password', { method: 'PUT', body: JSON.stringify({ password: userNewPassword.value }) }); alert('✅ 密码修改成功！请使用新密码重新登录。'); logout(); };
                 const resetMySubLink = async () => { if(confirm('🚨 危险操作！重置后系统将为您签发全新的 UUID 订阅令牌，原链接将【立即作废】！确定要继续重置吗？')) { await fetchApi('/api/user/sub_token', { method: 'PUT' }); alert('✅ 订阅令牌已刷新！'); refreshData(); } };
                 
@@ -1602,7 +1602,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     } catch (err) { alert('生成二维码失败！请检查链接长度或浏览器控制台。'); }
                 };
 
-                const saveProbeSettings = async () => { await fetchApi('/api/probe/admin/settings', { method: 'POST', body: JSON.stringify({settings: probeSys}) }); if (realtimeUrl.value) { try { const headers = await window.kuiAdminAuthHeader(); await fetch(`${realtimeUrl.value}/public-policy`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ public: probeSys.is_public === 'true' }) }); } catch(e) {} } alert('✅ 探针大盘配置已生效！如果配置了TG参数已自动绑定Webhook。'); refreshData(); fetchProbeData(); };
+                const saveProbeSettings = async () => { await fetchApi('/api/probe/admin/settings', { method: 'POST', body: JSON.stringify({settings: probeSys}) }); if (realtimeUrl.value) { try { const headers = await window.xuiAdminAuthHeader(); await fetch(`${realtimeUrl.value}/public-policy`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ public: probeSys.is_public === 'true' }) }); } catch(e) {} } alert('✅ 探针大盘配置已生效！如果配置了TG参数已自动绑定Webhook。'); refreshData(); fetchProbeData(); };
                 const saveSubscriptionProtection = async () => {
                     const value = probeSys.subscription_protection;
                     try {
@@ -1742,8 +1742,8 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         if (probe && timestamp >= Number(probe._realtime_ts || probe.last_updated || 0)) Object.assign(probe, { cpu: core.cpu, ram: core.mem, disk: core.disk, load_avg: core.load, uptime: core.uptime, net_in_speed: core.net_in_speed, net_out_speed: core.net_out_speed, tcp_conn: core.tcp_conn, udp_conn: core.udp_conn, last_updated: timestamp, realtime_state: snapshot.core_state, _realtime_ts: timestamp });
                         if (normalizeRealtimeKey(probeDetail.value?.id) === key && timestamp >= Number(probeDetail.value?._realtime_ts || probeDetail.value?.last_updated || 0)) { Object.assign(probeDetail.value, { cpu: core.cpu, ram: core.mem, disk: core.disk, load_avg: core.load, uptime: core.uptime, net_in_speed: core.net_in_speed, net_out_speed: core.net_out_speed, tcp_conn: core.tcp_conn, udp_conn: core.udp_conn, last_updated: timestamp, realtime_state: snapshot.core_state, _realtime_ts: timestamp }); updateProbeDetailCharts(probeDetail.value); }
                     }
-                    window.kuiRealtimeProxySnapshots = window.kuiRealtimeProxySnapshots || {};
-                    if (snapshot.proxy || snapshot.proxy_state || snapshot.proxy_config_result) { const previous = window.kuiRealtimeProxySnapshots[snapshot.ip] || {}; window.kuiRealtimeProxySnapshots[snapshot.ip] = { ...previous, ...snapshot, proxy: snapshot.proxy || previous.proxy }; if (activeTab.value === 'proxy') setTimeout(pcFetchNodes, 0); }
+                    window.xuiRealtimeProxySnapshots = window.xuiRealtimeProxySnapshots || {};
+                    if (snapshot.proxy || snapshot.proxy_state || snapshot.proxy_config_result) { const previous = window.xuiRealtimeProxySnapshots[snapshot.ip] || {}; window.xuiRealtimeProxySnapshots[snapshot.ip] = { ...previous, ...snapshot, proxy: snapshot.proxy || previous.proxy }; if (activeTab.value === 'proxy') setTimeout(pcFetchNodes, 0); }
                 };
                 const scheduleRealtimeFallback = () => {
                     clearTimeout(realtimeFallbackTimer);
@@ -1757,7 +1757,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     const generation = ++realtimeGeneration;
                     scheduleRealtimeFallback();
                     try {
-                        const authHeaders = await window.kuiAdminAuthHeader();
+                        const authHeaders = await window.xuiAdminAuthHeader();
                         const ticketController = new AbortController();
                         const ticketTimeout = setTimeout(() => ticketController.abort(), 30000);
                         const ticketRes = await fetch(`${realtimeUrl.value}/dashboard/ticket`, { method: 'POST', headers: authHeaders, signal: ticketController.signal }).finally(() => clearTimeout(ticketTimeout));
@@ -1769,9 +1769,9 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         realtimeSocket = socket;
                         clearTimeout(realtimeConnectTimer);
                         realtimeConnectTimer = setTimeout(() => { if (realtimeSocket === socket && socket.readyState === WebSocket.CONNECTING) socket.close(); }, 30000);
-                        socket.onopen = () => { if (realtimeSocket !== socket || generation !== realtimeGeneration) return socket.close(); clearTimeout(realtimeConnectTimer); realtimeDisconnectedAt = 0; realtimeRetryDelay = 5000; lastRealtimePing = Date.now(); realtimeConnected.value = true; window.kuiRealtimeConnected = true; clearTimeout(realtimeFallbackTimer); publicRealtimeSocket?.close(); refreshData(); stopPolling(); stopProbePolling(); pcStopProxy(); clearInterval(realtimePingTimer); realtimePingTimer = setInterval(() => { const now = Date.now(); if (realtimeSocket?.readyState === WebSocket.OPEN && now - lastRealtimePing >= 30000) { realtimeSocket.send('ping'); lastRealtimePing = now; } servers.value.forEach(server => { if (server.realtime_state === 'online' && now - server.last_report > 20000) server.realtime_state = 'stale'; }); publicProbeServers.value.forEach(server => { if (server.realtime_state === 'online' && server.last_updated && now - server.last_updated > 20000) server.realtime_state = 'stale'; }); if (activeTab.value === 'proxy') pcFetchNodes(); }, 5000); };
+                        socket.onopen = () => { if (realtimeSocket !== socket || generation !== realtimeGeneration) return socket.close(); clearTimeout(realtimeConnectTimer); realtimeDisconnectedAt = 0; realtimeRetryDelay = 5000; lastRealtimePing = Date.now(); realtimeConnected.value = true; window.xuiRealtimeConnected = true; clearTimeout(realtimeFallbackTimer); publicRealtimeSocket?.close(); refreshData(); stopPolling(); stopProbePolling(); pcStopProxy(); clearInterval(realtimePingTimer); realtimePingTimer = setInterval(() => { const now = Date.now(); if (realtimeSocket?.readyState === WebSocket.OPEN && now - lastRealtimePing >= 30000) { realtimeSocket.send('ping'); lastRealtimePing = now; } servers.value.forEach(server => { if (server.realtime_state === 'online' && now - server.last_report > 20000) server.realtime_state = 'stale'; }); publicProbeServers.value.forEach(server => { if (server.realtime_state === 'online' && server.last_updated && now - server.last_updated > 20000) server.realtime_state = 'stale'; }); if (activeTab.value === 'proxy') pcFetchNodes(); }, 5000); };
                         socket.onmessage = event => { if (realtimeSocket !== socket) return; try { const message = JSON.parse(event.data); if (message.type === 'snapshot') (message.data || []).forEach(applyRealtimeSnapshot); else if (message.type === 'patch') applyRealtimeSnapshot(message.data); } catch(e) {} };
-                        socket.onclose = () => { if (realtimeSocket !== socket) return; clearTimeout(realtimeConnectTimer); clearInterval(realtimePingTimer); realtimeConnected.value = false; window.kuiRealtimeConnected = false; realtimeSocket = null; if (isLoggedIn.value && !document.hidden) { scheduleRealtimeFallback(); clearTimeout(realtimeReconnectTimer); const delay = realtimeRetryDelay; realtimeRetryDelay = Math.min(realtimeRetryDelay * 2, 300000); realtimeReconnectTimer = setTimeout(connectRealtime, delay); } };
+                        socket.onclose = () => { if (realtimeSocket !== socket) return; clearTimeout(realtimeConnectTimer); clearInterval(realtimePingTimer); realtimeConnected.value = false; window.xuiRealtimeConnected = false; realtimeSocket = null; if (isLoggedIn.value && !document.hidden) { scheduleRealtimeFallback(); clearTimeout(realtimeReconnectTimer); const delay = realtimeRetryDelay; realtimeRetryDelay = Math.min(realtimeRetryDelay * 2, 300000); realtimeReconnectTimer = setTimeout(connectRealtime, delay); } };
                         socket.onerror = () => socket.close();
                     } catch(e) { if (generation !== realtimeGeneration) return; scheduleRealtimeFallback(); clearTimeout(realtimeReconnectTimer); const delay = realtimeRetryDelay; realtimeRetryDelay = Math.min(realtimeRetryDelay * 2, 300000); realtimeReconnectTimer = setTimeout(connectRealtime, delay); }
                 };
@@ -1787,8 +1787,8 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     socket.onclose = event => { if (publicRealtimeSocket !== socket) return; clearTimeout(publicRealtimeConnectTimer); publicRealtimeSocket = null; clearInterval(publicRealtimeActivityTimer); if (event.code === 1008) { clearTimeout(publicRealtimeReconnectTimer); stopProbePolling(); publicProbeServers.value = []; probeSys.is_public = 'false'; return; } if (!publicRealtimeDisconnectedAt) publicRealtimeDisconnectedAt = Date.now(); clearTimeout(publicRealtimeFallbackTimer); publicRealtimeFallbackTimer = setTimeout(() => { if (!document.hidden && !isLoggedIn.value) startProbePolling(); }, Math.max(0, 30000 - (Date.now() - publicRealtimeDisconnectedAt))); clearTimeout(publicRealtimeReconnectTimer); const delay = publicRealtimeRetryDelay; publicRealtimeRetryDelay = Math.min(publicRealtimeRetryDelay * 2, 300000); publicRealtimeReconnectTimer = setTimeout(connectPublicRealtime, delay); };
                     socket.onerror = () => socket.close();
                 };
-                const notifyRealtime = async (ip = '') => { if (!realtimeUrl.value || role.value !== 'admin') return; try { const headers = await window.kuiAdminAuthHeader(); await fetch(`${realtimeUrl.value}/notify`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(ip ? { ip } : {}) }); } catch(e) {} };
-                window.kuiNotifyRealtime = notifyRealtime;
+                const notifyRealtime = async (ip = '') => { if (!realtimeUrl.value || role.value !== 'admin') return; try { const headers = await window.xuiAdminAuthHeader(); await fetch(`${realtimeUrl.value}/notify`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(ip ? { ip } : {}) }); } catch(e) {} };
+                window.xuiNotifyRealtime = notifyRealtime;
                 const startPolling = () => { 
                     if (realtimeConnected.value) return;
                     if (!dataTimer) { refreshData(); dataTimer = setInterval(() => { if (isLoggedIn.value && !document.hidden && activeTab.value !== 'probe') refreshData(); }, FALLBACK_DATA_INTERVAL); }
@@ -1813,7 +1813,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     }
                     await fetchProbeData();
                     if (!isLoggedIn.value || role.value !== 'admin') startProbePolling();
-                    document.addEventListener('visibilitychange', () => { if (document.hidden) { realtimeGeneration++; realtimeDisconnectedAt = 0; publicRealtimeDisconnectedAt = 0; stopPolling(); stopProbePolling(); clearInterval(realtimePingTimer); clearInterval(publicRealtimeActivityTimer); clearTimeout(realtimeFallbackTimer); clearTimeout(realtimeReconnectTimer); clearTimeout(publicRealtimeReconnectTimer); const socket = realtimeSocket; realtimeSocket = null; socket?.close(); const publicSocket = publicRealtimeSocket; publicRealtimeSocket = null; publicSocket?.close(); realtimeConnected.value = false; window.kuiRealtimeConnected = false; } else if (isLoggedIn.value && role.value === 'admin' && realtimeUrl.value) { connectRealtime(); scheduleRealtimeFallback(); } else if (!isLoggedIn.value && realtimeUrl.value && probeSys.is_public === 'true') { connectPublicRealtime(); } else { if (isLoggedIn.value) startPolling(); startProbePolling(); } });
+                    document.addEventListener('visibilitychange', () => { if (document.hidden) { realtimeGeneration++; realtimeDisconnectedAt = 0; publicRealtimeDisconnectedAt = 0; stopPolling(); stopProbePolling(); clearInterval(realtimePingTimer); clearInterval(publicRealtimeActivityTimer); clearTimeout(realtimeFallbackTimer); clearTimeout(realtimeReconnectTimer); clearTimeout(publicRealtimeReconnectTimer); const socket = realtimeSocket; realtimeSocket = null; socket?.close(); const publicSocket = publicRealtimeSocket; publicRealtimeSocket = null; publicSocket?.close(); realtimeConnected.value = false; window.xuiRealtimeConnected = false; } else if (isLoggedIn.value && role.value === 'admin' && realtimeUrl.value) { connectRealtime(); scheduleRealtimeFallback(); } else if (!isLoggedIn.value && realtimeUrl.value && probeSys.is_public === 'true') { connectPublicRealtime(); } else { if (isLoggedIn.value) startPolling(); startProbePolling(); } });
                 });
 
                 return { 
@@ -1844,8 +1844,8 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
         }
 
         async function getPcAuthHeader(method, path) {
-            const user = localStorage.getItem('kui_user') || 'admin';
-            const key = localStorage.getItem('kui_auth_key') || '';
+            const user = localStorage.getItem('xui_user') || 'admin';
+            const key = localStorage.getItem('xui_auth_key') || '';
             if (!key) return '';
             return `Bearer ${key}`;
         }
@@ -1879,7 +1879,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
             const val = document.getElementById(`slot-cfg-0`).value.toUpperCase().trim() || 'JP';
             const port = parseInt(document.getElementById(`slot-port`).value) || 7920;
             try {
-                const targets = window.kuiManagedServerIps?.() || [];
+                const targets = window.xuiManagedServerIps?.() || [];
                 if (!targets.length) throw new Error('暂无已接入 VPS');
                 let text = '';
                 for (const ip of targets) {
@@ -1887,7 +1887,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     const res = await fetch('/api/proxy/config', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': auth }, body: JSON.stringify({ ip, "0": val, "country": val, "port": port }) });
                     text = await res.text();
                     if (!res.ok) throw new Error(text || res.status);
-                    window.kuiNotifyRealtime?.(ip);
+                    window.xuiNotifyRealtime?.(ip);
                 }
                 // 直接从 POST 响应体更新输入字段，避免立即回读时 D1 最终一致性导致读到旧数据
                 try {
@@ -1906,14 +1906,14 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
             const val = document.getElementById(`slot-cfg-0`).value.toUpperCase().trim() || 'JP';
             const port = parseInt(document.getElementById(`slot-port`).value) || 7920;
             try {
-                const targets = window.kuiManagedServerIps?.() || [];
+                const targets = window.xuiManagedServerIps?.() || [];
                 if (!targets.length) throw new Error('暂无已接入 VPS');
                 const trigger = Date.now();
                 for (const ip of targets) {
                     const auth = await getPcAuthHeader('POST', '/api/proxy/config');
                     const res = await fetch('/api/proxy/config', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': auth }, body: JSON.stringify({ ip, "0": val, "country": val, "port": port, "switch_trigger": trigger }) });
                     if (!res.ok) { const err = await res.text(); throw new Error(err || res.status); }
-                    window.kuiNotifyRealtime?.(ip);
+                    window.xuiNotifyRealtime?.(ip);
                 }
                 alert(`🔄 重拨指令已实时下发到 ${targets.length} 台 VPS！`);
             } catch (e) { alert('❌ 下发失败: ' + e.message); }
@@ -1925,7 +1925,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
             container.innerHTML = '<div class="col-span-full py-16 flex flex-col items-center justify-center text-slate-500"><svg class="animate-spin h-8 w-8 text-indigo-500 mb-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>穿透请求中，正在构建原生质检报告...</span></div>';
 
             try {
-                const authHeaders = window.kuiAdminAuthHeader ? await window.kuiAdminAuthHeader() : {};
+                const authHeaders = window.xuiAdminAuthHeader ? await window.xuiAdminAuthHeader() : {};
                 const res = await fetch('/api/proxy/testisp-lookup/' + ip, { headers: authHeaders });
                 const rawText = await res.text();
 
@@ -2007,7 +2007,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
         async function pcFetchNodes() {
             try {
                 let servers = [];
-                const realtimeSnapshots = Object.values(window.kuiRealtimeProxySnapshots || {});
+                const realtimeSnapshots = Object.values(window.xuiRealtimeProxySnapshots || {});
                 // Realtime is a fast path only. Keep an HTTP snapshot so a missing proxy
                 // socket or an incomplete realtime patch cannot hide persisted tunnel data.
                 if (Date.now() - lastPcHttpFetch >= 15000) {
@@ -2165,7 +2165,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
             pcFetchCountries();
             pcLoadConfig();
             pcFetchNodes();
-            if (!window.kuiRealtimeConnected) pcInterval = setInterval(pcFetchNodes, 15000);
+            if (!window.xuiRealtimeConnected) pcInterval = setInterval(pcFetchNodes, 15000);
         }
 
         function pcStopProxy() {

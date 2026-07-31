@@ -1,13 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kui-realtime",
+  "name": "xui-realtime",
   "main": "src/index.js",
   "compatibility_date": "2026-07-12",
   "workers_dev": true,
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "kui-db",
+      "database_name": "xui-db",
       "database_id": "739d037a-97e0-4724-b06a-d1b5f8459dc1"
     }
   ],

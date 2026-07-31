@@ -1,5 +1,5 @@
 // ==========================================
-// KUI Serverless 聚合网关后端 - 精简核心版
+// XUI Serverless 聚合网关后端 - 精简核心版
 // (包含：自动建表升级 + 极速8合1协议生成 + 探针管理 + Clash订阅 + 动态云端测速/主题)
 // ==========================================
 
@@ -105,7 +105,7 @@ async function notifyRealtimePublicPolicy(env, db, enabled, pagesOrigin = '') {
     if (!configured || !/^https:\/\//i.test(configured)) return;
     await fetch(`${configured.replace(/\/$/, '')}/public-policy`, {
         method: 'POST',
-        headers: { Authorization: authorization, 'Content-Type': 'application/json', 'X-KUI-Pages-Origin': pagesOrigin },
+        headers: { Authorization: authorization, 'Content-Type': 'application/json', 'X-XUI-Pages-Origin': pagesOrigin },
         body: JSON.stringify({ public: enabled }),
     });
 }
@@ -125,7 +125,7 @@ async function notifyRealtimeFrequencyPolicy(env, db, settings, pagesOrigin = ''
     if (!policy || !authorization || !configured || !/^https:\/\//i.test(configured)) return;
     await fetch(`${configured.replace(/\/$/, '')}/frequency-policy`, {
         method: 'POST',
-        headers: { Authorization: authorization, 'Content-Type': 'application/json', 'X-KUI-Pages-Origin': pagesOrigin },
+        headers: { Authorization: authorization, 'Content-Type': 'application/json', 'X-XUI-Pages-Origin': pagesOrigin },
         body: JSON.stringify(policy),
     });
 }
@@ -134,7 +134,7 @@ async function notifyRealtimeVps(env, db, ip, pagesOrigin = '') {
     const authorization = await realtimeAdminHeader(env);
     const configured = env.REALTIME_URL || (await db.prepare("SELECT val FROM sys_config WHERE key = 'realtime_url'").first())?.val;
     if (!authorization || !configured || !/^https:\/\//i.test(configured)) return;
-    await fetch(`${configured.replace(/\/$/, '')}/notify`, { method: 'POST', headers: { Authorization: authorization, 'Content-Type': 'application/json', 'X-KUI-Pages-Origin': pagesOrigin }, body: JSON.stringify({ ip }) });
+    await fetch(`${configured.replace(/\/$/, '')}/notify`, { method: 'POST', headers: { Authorization: authorization, 'Content-Type': 'application/json', 'X-XUI-Pages-Origin': pagesOrigin }, body: JSON.stringify({ ip }) });
 }
 
 async function chunkBatch(db, statements, size = 100) {
@@ -988,7 +988,7 @@ async function checkOfflineServers(env) {
     for (const vps of results) {
         let delivered = !tgBotToken || !tgChatId;
         if (tgBotToken && tgChatId) {
-            const text = `⚠️ [KUI 节点失联告警]\n\n节点别名: ${vps.name}\n公网IP: ${vps.ip}\n最后在线: ${new Date(vps.last_report).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`;
+            const text = `⚠️ [XUI 节点失联告警]\n\n节点别名: ${vps.name}\n公网IP: ${vps.ip}\n最后在线: ${new Date(vps.last_report).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`;
             try { const response = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: tgChatId, text }) }); const result = await response.json().catch(()=>({ok:false})); delivered = response.ok && result.ok === true; }
             catch (error) { console.error(`[cron] Telegram alert failed for ${vps.ip}:`, error); }
         }
@@ -999,7 +999,7 @@ async function checkOfflineServers(env) {
 }
 
 // ==============================================
-// KUI 主体接口路由
+// XUI 主体接口路由
 // ==============================================
 export async function onRequest(context) {
     const { request, env, params } = context;
@@ -1036,7 +1036,7 @@ export async function onRequest(context) {
         if (!(await verifyAgent(request.headers.get('Authorization'), ip, db, env))) return new Response('Unauthorized', { status: 401 });
         if (!env.ASSETS) return Response.json({ error: 'ASSETS binding is unavailable' }, { status: 503 });
         const component = new URL(request.url).searchParams.get('component') || 'agent';
-        const assets = { agent: '/vps/agent.py', 'realtime-client': '/vps/realtime_client.py', 'proxy-manager': '/vps/lite_manager.py', 'proxy-server': '/vps/proxy_server.py', 'proxy-installer': '/vps/residential-proxy.sh', 'full-installer': '/vps/kui.sh' };
+        const assets = { agent: '/vps/agent.py', 'realtime-client': '/vps/realtime_client.py', 'proxy-manager': '/vps/lite_manager.py', 'proxy-server': '/vps/proxy_server.py', 'proxy-installer': '/vps/residential-proxy.sh', 'full-installer': '/vps/xui.sh' };
         if (!assets[component]) return Response.json({ error: 'Unknown agent component' }, { status: 400 });
         const assetUrl = new URL(assets[component], request.url);
         const asset = await env.ASSETS.fetch(assetUrl);
@@ -1064,11 +1064,11 @@ export async function onRequest(context) {
         if (!data.report_id) return Response.json({ error: "report_id is required" }, { status: 400 });
         const duplicateReport = !!(await db.prepare("SELECT report_id FROM report_receipts WHERE report_id = ? AND applied = 1").bind(data.report_id).first());
 
-        const kuiServer = await db.prepare('SELECT name FROM servers WHERE ip = ?').bind(vpsIp).first();
-        if (!kuiServer) {
-            return Response.json({ error: "Server has been removed from KUI panel." }, { status: 403 });
+        const xuiServer = await db.prepare('SELECT name FROM servers WHERE ip = ?').bind(vpsIp).first();
+        if (!xuiServer) {
+            return Response.json({ error: "Server has been removed from XUI panel." }, { status: 403 });
         }
-        const serverName = kuiServer.name;
+        const serverName = xuiServer.name;
 
         try { 
             await db.prepare("UPDATE servers SET cpu=?, mem=?, disk=?, load=?, uptime=?, net_in_speed=?, net_out_speed=?, tcp_conn=?, udp_conn=?, last_report=?, alert_sent=0 WHERE ip=?")
@@ -1234,7 +1234,7 @@ export async function onRequest(context) {
         if (action === "egress_result" && method === "POST") {
             await ensureDbSchema(db);
             const body = await request.json();
-            const ip = body.ip || request.headers.get('X-KUI-IP');
+            const ip = body.ip || request.headers.get('X-XUI-IP');
             if (!ip || !(await verifyAgent(request.headers.get('Authorization'), ip, db, env))) return new Response('Unauthorized', { status: 401 });
             const modes = ['native', 'residential', 'warp_ipv4', 'warp_ipv6', 'warp_dual', 'socks5'];
         const revision = Number(body.revision);
@@ -1337,7 +1337,7 @@ export async function onRequest(context) {
 
         for (let node of results) {
             const vpsInfo = await db.prepare("SELECT name FROM servers WHERE ip = ?").bind(node.vps_ip).first(); 
-            const rawRemark = `${vpsInfo ? vpsInfo.name : 'KUI'} | ${node.protocol}_${node.port}`; 
+            const rawRemark = `${vpsInfo ? vpsInfo.name : 'XUI'} | ${node.protocol}_${node.port}`; 
             const remark = encodeURIComponent(rawRemark); 
             let link = "";
             let cProxy = "";
@@ -1542,7 +1542,7 @@ rules:
             return new Response(clashYaml, { 
                 headers: { 
                     "Content-Type": "text/yaml; charset=utf-8", 
-                    "Content-Disposition": "attachment; filename=kui-clash.yaml" 
+                    "Content-Disposition": "attachment; filename=xui-clash.yaml" 
                 }
             });
         }

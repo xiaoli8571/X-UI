@@ -1,4 +1,4 @@
-# KUI x Server Monitor Pro
+# XUI x Server Monitor Pro
 
 ## 项目赞助商
 
@@ -20,18 +20,18 @@ DeRouter 提供 Claude、GPT 等模型 API 服务，支持透明可验证的模�
   </a>
 </p>
 
-ByteVirt 提供多地域 VPS，适合部署 KUI VPS Agent、探针与代理节点。
+ByteVirt 提供多地域 VPS，适合部署 XUI VPS Agent、探针与代理节点。
 
 - 官网：https://bytevirt.com/aff.php?aff=209
-- 多地域机房与稳定网络，适用于 KUI 节点部署。
+- 多地域机房与稳定网络，适用于 XUI 节点部署。
 
 ---
 
 > **⚠️ 重要提示：一键部署后如果页面显示空白或 "Hello World"，请阅读下方 [一键部署故障排除](#一键部署故障排除)。**
 
-KUI 是一个部署在 **单一 Cloudflare Worker** 的代理节点管理与服务器探针面板。Worker Assets 托管前端和 VPS 安装组件，D1 保存配置、用户、流量和探针数据，Durable Objects 提供实时 WebSocket；无需部署传统面板服务器或额外 Realtime Worker。
+XUI 是一个部署在 **单一 Cloudflare Worker** 的代理节点管理与服务器探针面板。Worker Assets 托管前端和 VPS 安装组件，D1 保存配置、用户、流量和探针数据，Durable Objects 提供实时 WebSocket；无需部署传统面板服务器或额外 Realtime Worker。
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/xiaoli8571/K-UI-workers)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/xiaoli8571/X-UI)
 
 ## 一键部署
 
@@ -47,7 +47,7 @@ KUI 是一个部署在 **单一 Cloudflare Worker** 的代理节点管理与服�
 如果部署后页面无法正常加载，请按以下步骤排查：
 
 **① 检查 D1 数据库绑定**
-- 进入 Cloudflare Dashboard → Workers & Pages → 你的 Worker (kui)
+- 进入 Cloudflare Dashboard → Workers & Pages → 你的 Worker (xui)
 - 左侧 → **Settings → Variables**
 - 在 **D1 Database Bindings** 下找到 `DB`
 - 如果没有绑定，点击 **Add binding**：
@@ -83,8 +83,8 @@ KUI 是一个部署在 **单一 Cloudflare Worker** 的代理节点管理与服�
 内置住宅代理也已预设凭据：
 
 ```text
-PROXY_USER=kui
-PROXY_PASS=kui
+PROXY_USER=xui
+PROXY_PASS=xui
 ```
 
 启用住宅代理前，应在 Worker 的 **Variables and Secrets** 中将两项覆盖为独立的强 Secret 并重新部署。
@@ -98,8 +98,8 @@ PROXY_PASS=kui
 适用于需要使用已有 D1、固定 Worker 名称或自行维护发布流程的场景。
 
 ```bash
-git clone https://github.com/a6216abcd/K-UI-workers.git
-cd K-UI-workers
+git clone https://github.com/xiaoli8571/X-UI.git
+cd X-UI
 npm install
 npx wrangler login
 npx wrangler deploy
@@ -133,7 +133,7 @@ npm run dev
 
 ## VPS 接入
 
-1. 登录 KUI，进入 **服务器与节点**。
+1. 登录 XUI，进入 **服务器与节点**。
 2. 添加 VPS 名称和公网 IP。
 3. 复制页面生成的 Full Deploy Command，以 `root` 在 VPS 执行。
 4. 等待 Agent 回连后创建节点或使用"8 合 1"批量部署。
@@ -157,7 +157,7 @@ npm run dev
         |
 Cloudflare Worker
   |- Worker Assets: 前端与 VPS 安装文件
-  |- /api/*: KUI 后端接口
+  |- /api/*: XUI 后端接口
   |- /agent/ws、/dashboard/*、/public/ws：内置实时服务
   |- Cron: 离线检查
   |- D1 (DB): 配置、用户、节点、流量、探针数据
@@ -166,7 +166,7 @@ Cloudflare Worker
 
 ## 注意事项
 
-- 一键部署默认使用 `admin/admin` 和住宅代理凭据 `kui/kui`。公开使用前必须将 `ADMIN_PASSWORD`、`PROXY_USER`、`PROXY_PASS` 覆盖为 Secret。
+- 一键部署默认使用 `admin/admin` 和住宅代理凭据 `xui/xui`。公开使用前必须将 `ADMIN_PASSWORD`、`PROXY_USER`、`PROXY_PASS` 覆盖为 Secret。
 - 不要提交自定义 `ADMIN_PASSWORD`、D1 ID、Telegram Token 或代理凭据。
 - `DB` 是固定 binding 名称，修改会导致后端无法访问数据库。
 - 修改 Worker Variables 或 Bindings 后需要重新部署。
