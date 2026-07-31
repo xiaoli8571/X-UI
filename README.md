@@ -1,31 +1,5 @@
-# XUI x Server Monitor Pro
+# X-ui
 
-## 项目赞助商
-
-<p align="center">
-  <a href="https://derouter.ai?ref=0oZZ1HVc" target="_blank">
-    <strong>DeRouter</strong> - 基于区块链的透明大模型 API 网关
-  </a>
-</p>
-
-DeRouter 提供 Claude、GPT 等模型 API 服务，支持透明可验证的模型调用。
-
-- 官网：https://derouter.ai?ref=0oZZ1HVc
-- X：https://x.com/derouter_net
-- 有 API 需求或 Claude 账号托管需求可访问其官网了解详情。
-
-<p align="center">
-  <a href="https://bytevirt.com/aff.php?aff=209" target="_blank">
-    <strong>ByteVirt</strong> - 高性价比云服务器与 VPS 服务商
-  </a>
-</p>
-
-ByteVirt 提供多地域 VPS，适合部署 XUI VPS Agent、探针与代理节点。
-
-- 官网：https://bytevirt.com/aff.php?aff=209
-- 多地域机房与稳定网络，适用于 XUI 节点部署。
-
----
 
 > **⚠️ 重要提示：一键部署后如果页面显示空白或 "Hello World"，请阅读下方 [一键部署故障排除](#一键部署故障排除)。**
 
