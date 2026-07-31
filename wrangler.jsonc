@@ -7,8 +7,8 @@
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ADMIN_PASSWORD": "admin",
-    "PROXY_USER": "xui",
-    "PROXY_PASS": "xui"
+    "PROXY_USER": "",
+    "PROXY_PASS": ""
   },
   "assets": {
     "directory": "static",
