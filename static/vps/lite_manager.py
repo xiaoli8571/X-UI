@@ -57,7 +57,8 @@ heartbeat_wakeup = threading.Event()
 last_http_report = 0
 # Persist a regular HTTP snapshot even while realtime is connected. This keeps
 # the dashboard usable when a Durable Object websocket reconnects or is stale.
-REALTIME_HTTP_INTERVAL = 60
+# Throttled to 5 minutes to match agent.py and avoid burning Workers quota.
+REALTIME_HTTP_INTERVAL = 300
 REALTIME_STATUS_ACTIVE_INTERVAL = 5
 REALTIME_STATUS_IDLE_INTERVAL = 30
 realtime_status_interval = REALTIME_STATUS_ACTIVE_INTERVAL
@@ -340,7 +341,7 @@ def c2_heartbeat_loop():
         elif realtime_channel and realtime_channel.ever_connected and time.time() - realtime_channel.last_disconnected < 30:
             interval = max(1, 30 - (time.time() - realtime_channel.last_disconnected))
         else:
-            interval = 90
+            interval = 300
         heartbeat_wakeup.wait(timeout=interval)
         heartbeat_wakeup.clear()
 
