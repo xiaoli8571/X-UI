@@ -8,7 +8,8 @@
     "ADMIN_USERNAME": "admin",
     "ADMIN_PASSWORD": "admin",
     "PROXY_USER": "",
-    "PROXY_PASS": ""
+    "PROXY_PASS": "",
+    "TG_WEBHOOK_SECRET": "xui-tg-zkOlUgSiGLNaIbZ1Fj8cXnYhV3quHsv2"
   },
   "assets": {
     "directory": "static",
