@@ -59,8 +59,8 @@ last_http_report = 0
 # the dashboard usable when a Durable Object websocket reconnects or is stale.
 # Throttled to 480s to match user preference and avoid burning Workers quota.
 REALTIME_HTTP_INTERVAL = 480
-REALTIME_STATUS_ACTIVE_INTERVAL = 5
-REALTIME_STATUS_IDLE_INTERVAL = 30
+REALTIME_STATUS_ACTIVE_INTERVAL = 30
+REALTIME_STATUS_IDLE_INTERVAL = 120
 realtime_status_interval = REALTIME_STATUS_ACTIVE_INTERVAL
 # 低功耗模式：面板关闭住宅代理时置 True，停止 HTTP 轮询/上报以节省额度
 proxy_low_power = False
