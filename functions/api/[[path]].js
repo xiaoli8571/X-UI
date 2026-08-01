@@ -1916,7 +1916,8 @@ rules:
             // 📥 导入 VPS 列表（仅创建记录并签发 agent_token，激活需在 VPS 上执行 Full Deploy Command）
             if (method === "POST" && params.path[1] === "import") {
                 let list;
-                try { list = await readJsonBody(request, 256 * 1024); } catch (e) { return Response.json({ error: 'Invalid JSON body' }, { status: 400 }); }
+                // 注意：不能用 readJsonBody（它拒绝数组）；导入数据是 [{name,ip},...] 数组
+                try { list = await request.json(); } catch (e) { return Response.json({ error: 'Invalid JSON body' }, { status: 400 }); }
                 if (!Array.isArray(list)) {
                     if (list && Array.isArray(list.servers)) list = list.servers;
                     else return Response.json({ error: '导入内容需为 [{name, ip}, ...] 数组' }, { status: 400 });
