@@ -1,12 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
 
 // Quota-friendly frequencies: every VPS agent WebSocket status message is a
-// Durable Object request, so active dashboards are throttled to 30s, public to
-// 60s, and idle to 120s to keep the free 100k/day shared quota sustainable.
-const ADMIN_STATUS_INTERVAL = 30_000;
-const PUBLIC_STATUS_INTERVAL = 60_000;
-const IDLE_STATUS_INTERVAL = 120_000;
-const STATUS_STALE_AFTER = 60_000;
+// Durable Object request. Active dashboards 60s, public 120s, idle 300s keep
+// the free 100k/day shared quota sustainable while staying usable.
+const ADMIN_STATUS_INTERVAL = 60_000;
+const PUBLIC_STATUS_INTERVAL = 120_000;
+const IDLE_STATUS_INTERVAL = 300_000;
+const STATUS_STALE_AFTER = 120_000;
 const VIEWER_LEASE_MS = 90_000;
 const RESYNC_COOLDOWN_MS = 30_000;
 const SNAPSHOT_CACHE_MS = 10_000;

@@ -389,8 +389,8 @@ def check_for_update():
 
 # Dashboard viewers receive five-second updates. While nobody is connected,
 # Durable Objects switch routine metric snapshots to a lower rate.
-REALTIME_STATUS_ACTIVE_INTERVAL = 30
-REALTIME_STATUS_IDLE_INTERVAL = 120
+REALTIME_STATUS_ACTIVE_INTERVAL = 60
+REALTIME_STATUS_IDLE_INTERVAL = 300
 realtime_status_interval = REALTIME_STATUS_ACTIVE_INTERVAL
 global_interval = REALTIME_STATUS_ACTIVE_INTERVAL
 fast_mode = False
