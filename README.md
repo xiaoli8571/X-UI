@@ -54,14 +54,16 @@ XUI 是一个部署在 **单一 Cloudflare Worker** 的代理节点管理与服�
 
 这是为完整一键部署准备的默认值。首次登录后必须在 Worker 的 **Settings → Variables and Secrets** 将 `ADMIN_PASSWORD` 覆盖为强 Secret 并重新部署。
 
-内置住宅代理也已预设凭据：
+住宅代理默认**关闭**（`PROXY_USER`/`PROXY_PASS` 为空 = 零轮询零消耗）。
+
+启用住宅代理时，在 Worker 的 **Variables and Secrets** 中设置独立的强 Secret 并重新部署：
 
 ```text
-PROXY_USER=xui
-PROXY_PASS=xui
+PROXY_USER=你的用户名
+PROXY_PASS=你的密码
 ```
 
-启用住宅代理前，应在 Worker 的 **Variables and Secrets** 中将两项覆盖为独立的强 Secret 并重新部署。
+配置后住宅代理自动启用；不用时可在面板「代理池」一键关闭（关闭后 VPS 端立即进入低功耗模式，停止轮询）。
 
 ## 自定义域名
 
@@ -122,7 +124,46 @@ npm run dev
 - 多种预设探针主题、自定义 CSS 和背景。
 - 原生、WARP、住宅代理和手动 SOCKS5 节点出口。
 - 可选 Telegram 告警与订阅保护。
-- Worker Cron 每 5 分钟检查离线节点。
+- Worker Cron 每 15 分钟检查离线节点。
+
+## 🤖 Telegram 机器人（可选）
+
+内置 Telegram 机器人，支持**失联告警推送**和**远程控制**。
+
+### 配置方法
+
+1. 在 [@BotFather](https://t.me/BotFather) 创建机器人，获得 `bot_token`。
+2. 获取你的 Telegram 数字 ID（如向 [@userinfobot](https://t.me/userinfobot) 发送任意消息）。
+3. 面板 **设置 → 探针大盘** 填写 `tg_bot_token` 和 `tg_chat_id`，保存后自动注册 Webhook。
+4. 设置 Webhook 密钥（防止他人调用）：
+
+```bash
+npx wrangler secret put TG_WEBHOOK_SECRET
+npx wrangler deploy
+```
+
+### 机器人命令
+
+| 命令 | 功能 |
+|---|---|
+| `/start` `/menu` | 调出主菜单（内联键盘） |
+| `/nodes` | 查看全部 VPS 的节点矩阵（协议:端口 / 状态 / 归属） |
+| `/proxy <ip或名称> on\|off` | 远程开关住宅代理（不带 on/off 显示当前状态+按钮） |
+| `/stats` | 近 7 天流量统计（按 VPS、按节点） |
+| `/deploy8 <ip或名称> [起始端口]` | 一键下发 8 合 1 节点（XTLS-Reality / Hysteria2 / TUIC / Trojan / H2-Reality / gRPC-Reality / AnyTLS / Naive），带确认按钮 |
+| `/set_interval 10` | 设置探针上报间隔（秒） |
+| `/set_sitetitle 新标题` | 更改大盘标题 |
+
+主菜单内联键盘还提供：探针节点列表、节点矩阵、住宅代理开关、流量统计、系统设置快捷开关。
+
+> 安全：Webhook 同时校验 `X-Telegram-Bot-Api-Secret-Token` 与 `chat_id`，只有你本人能控制。
+
+## 住宅代理与额度说明
+
+- **默认关闭**：`PROXY_USER`/`PROXY_PASS` 未配置时，VPS 端住宅代理组件进入**低功耗模式**（不轮询、不上报），不消耗 Worker 额度。
+- **启用**：配置凭据后自动启用（VPS 恢复 480s 低频轮询）。
+- **关闭**：面板「代理池」或 TG 机器人 `/proxy ... off` 一键关闭，VPS 立即低功耗。
+- 其它额度优化（内置）：Agent HTTP 轮询 300s、WebSocket 重连上限 300s、前端兜底轮询 60s、Cron 15 分钟。
 
 ## 架构
 
@@ -140,7 +181,7 @@ Cloudflare Worker
 
 ## 注意事项
 
-- 一键部署默认使用 `admin/admin` 和住宅代理凭据 `xui/xui`。公开使用前必须将 `ADMIN_PASSWORD`、`PROXY_USER`、`PROXY_PASS` 覆盖为 Secret。
+- 一键部署默认使用 `admin/admin`；住宅代理默认关闭（凭据为空）。公开使用前必须将 `ADMIN_PASSWORD` 覆盖为强 Secret；启用住宅代理时再设置 `PROXY_USER`、`PROXY_PASS` 为独立强 Secret。
 - 不要提交自定义 `ADMIN_PASSWORD`、D1 ID、Telegram Token 或代理凭据。
 - `DB` 是固定 binding 名称，修改会导致后端无法访问数据库。
 - 修改 Worker Variables 或 Bindings 后需要重新部署。
