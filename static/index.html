@@ -1510,11 +1510,16 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const deleteGroup = async group => { if (confirm(`确定删除用户组“${group.name}”？不会删除其中的用户或节点。`)) { await fetchApi(`/api/groups?id=${encodeURIComponent(group.id)}`, { method: 'DELETE' }); delete groupDrafts[group.id]; refreshData(); } };
                 const addVps = async () => { if(!newVps.value.ip || !newVps.value.name) return alert('请输入名称和IP'); deployOsMap[newVps.value.ip] = newVps.value.os; saveOsMap(); await fetchApi('/api/vps', { method: 'POST', body: JSON.stringify({ ip: newVps.value.ip, name: newVps.value.name }) }); newVps.value = { name: '', ip: '', os: 'debian' }; refreshData(); fetchProbeData();};
 
-                // 📤 导出 VPS 列表（JSON 文件下载）
+                // 📤 导出 VPS 列表（JSON 文件下载，POST + 文本响应最稳）
                 const exportVps = async () => {
                     try {
-                        const res = await fetchApi('/api/vps/export');
-                        const data = await res.json();
+                        console.log('[exportVps] start');
+                        const res = await fetchApi('/api/vps/export', { method: 'GET' });
+                        console.log('[exportVps] status', res.status);
+                        const text = await res.text();
+                        console.log('[exportVps] body length', text.length);
+                        let data;
+                        try { data = JSON.parse(text); } catch (e) { throw new Error('响应不是有效 JSON: ' + text.slice(0, 120)); }
                         if (!Array.isArray(data)) throw new Error('返回数据格式错误');
                         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                         const url = URL.createObjectURL(blob);
@@ -1523,10 +1528,9 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         a.download = `xui-vps-${new Date().toISOString().slice(0, 10)}.json`;
                         document.body.appendChild(a);
                         a.click();
-                        a.remove();
-                        URL.revokeObjectURL(url);
+                        setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 100);
                         alert(`✅ 已导出 ${data.length} 台 VPS`);
-                    } catch (e) { alert('导出失败: ' + e.message); }
+                    } catch (e) { console.error('[exportVps] error', e); alert('导出失败: ' + e.message); }
                 };
 
                 // 📥 导入 VPS 列表（支持 JSON 数组 / {servers:[]} / CSV 每行 "名称,IP"）
