@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "xui",
+  "account_id": "ad895d004dceaee560295b4256cf24ff",
   "main": "src/worker.js",
   "compatibility_date": "2026-07-15",
   "workers_dev": true,
@@ -18,8 +19,7 @@
   },
   "d1_databases": [
     {
-      "binding": "DB",
-      "database_id": "6b5ece16-4d34-462c-bda9-4e2ca6cabf79"
+      "binding": "DB"
     }
   ],
   "triggers": {
