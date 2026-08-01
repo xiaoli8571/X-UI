@@ -3,6 +3,89 @@
 // (包含：自动建表升级 + 极速8合1协议生成 + 探针管理 + Clash订阅 + 动态云端测速/主题)
 // ==========================================
 
+import nacl from 'tweetnacl';
+
+function toBase64Url(uint8Array) {
+    let str = '';
+    for (let i = 0; i < uint8Array.length; i++) str += String.fromCharCode(uint8Array[i]);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function generateRealityKeys() {
+    const keypair = nacl.box.keyPair();
+    return { privateKey: toBase64Url(keypair.secretKey), publicKey: toBase64Url(keypair.publicKey), shortId: crypto.randomUUID().replace(/-/g, '').substring(0, 16) };
+}
+
+function formatBytes(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return `${n} B`;
+    const units = ['KB', 'MB', 'GB', 'TB', 'PB'];
+    let i = 0;
+    let v = n;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(v >= 100 ? 0 : 1)} ${units[i]}`;
+}
+
+async function findVps(db, key) {
+    const k = String(key || '').trim().toLowerCase();
+    if (!k) return null;
+    const byIp = await db.prepare('SELECT ip, name FROM servers WHERE lower(ip) = ?').bind(k).first();
+    if (byIp) return byIp;
+    const byName = await db.prepare('SELECT ip, name FROM servers WHERE lower(name) = ?').bind(k).first();
+    return byName || null;
+}
+
+// 8合1 全协议批量下发（与前端 deployAllProtocols 逻辑一致）
+async function deploy8Protocols(db, env, ip, startPort) {
+    const adminUser = env.ADMIN_USERNAME || 'admin';
+    const commonUUID = crypto.randomUUID();
+    const defaultSni = 'addons.mozilla.org';
+    const protocolSequence = [
+        { protocol: 'XTLS-Reality', offset: 0, sni: defaultSni, type: 'reality' },
+        { protocol: 'Hysteria2', offset: 1, sni: defaultSni },
+        { protocol: 'TUIC', offset: 2, sni: defaultSni },
+        { protocol: 'Trojan', offset: 3, sni: defaultSni },
+        { protocol: 'H2-Reality', offset: 4, sni: defaultSni, type: 'reality' },
+        { protocol: 'gRPC-Reality', offset: 5, sni: defaultSni, type: 'reality' },
+        { protocol: 'AnyTLS', offset: 6, sni: defaultSni },
+        { protocol: 'Naive', offset: 7, sni: defaultSni }
+    ];
+    const statements = [];
+    for (const item of protocolSequence) {
+        const port = startPort + item.offset;
+        const payload = {
+            id: crypto.randomUUID(), uuid: commonUUID, vps_ip: ip, protocol: item.protocol, port,
+            username: adminUser, traffic_limit: 0, expire_time: 0, sni: item.sni,
+            network: item.protocol === 'H2-Reality' ? 'http' : (item.protocol === 'gRPC-Reality' ? 'grpc' : 'tcp'),
+            private_key: '', public_key: '', short_id: ''
+        };
+        if (item.type === 'reality') {
+            const keys = generateRealityKeys();
+            payload.private_key = keys.privateKey; payload.public_key = keys.publicKey; payload.short_id = keys.shortId;
+        } else if (item.protocol === 'Naive') {
+            payload.uuid = commonUUID.replace(/-/g, '').substring(0, 16);
+            payload.private_key = payload.uuid;
+        } else {
+            const array = crypto.getRandomValues(new Uint8Array(16));
+            payload.private_key = btoa(String.fromCharCode.apply(null, array));
+        }
+        statements.push(db.prepare(`INSERT INTO nodes (id, uuid, vps_ip, protocol, port, sni, private_key, public_key, short_id, relay_type, target_ip, target_port, target_id, enable, traffic_used, traffic_limit, expire_time, username, network) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, 1, 0, ?, ?, ?, ?)`).bind(payload.id, payload.uuid, ip, item.protocol, port, payload.sni, payload.private_key, payload.public_key, payload.short_id, payload.traffic_limit, payload.expire_time, adminUser, payload.network));
+    }
+    await db.batch(statements);
+    return protocolSequence.map(p => `${p.protocol} (端口 ${startPort + p.offset})`).join('\n');
+}
+
+// 住宅代理开关（写入 proxy_slot_map_<ip> 的 enabled）
+async function setProxyEnabled(db, env, ip, enabled) {
+    const key = `proxy_slot_map_${ip}`;
+    const row = await db.prepare("SELECT value FROM probe_settings WHERE key = ?").bind(key).first();
+    let cfg = {};
+    try { cfg = JSON.parse(row && row.value || '{}'); } catch (e) {}
+    cfg.enabled = !!enabled;
+    await db.prepare("INSERT INTO probe_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(key, JSON.stringify(cfg)).run();
+    return cfg.enabled;
+}
+
 async function sha256(text) {
     const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
     return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -661,8 +744,8 @@ async function handleProbeAPI(request, env, context, pathArray) {
             else if (callback_query) { chatId = callback_query.message.chat.id.toString(); text = callback_query.data; msgId = callback_query.message.message_id; }
             if (chatId !== tgChatId) return new Response('OK', { status: 200 });
 
-            const mainMenuText = `🖥 <b>Server Monitor Pro 探针管理</b>\n\n您可以使用命令快速设置系统：\n<code>/set_interval 10</code> - 上报间隔10秒\n<code>/set_sitetitle 新标题</code> - 更改大盘标题\n<code>/menu</code> - 调出本菜单`;
-            const mainMenuKb = { inline_keyboard: [ [{text: '📋 探针节点列表', callback_data: 'cb_list_nodes'}], [{text: '⚙️ 系统设置快捷开关', callback_data: 'cb_settings'}] ] };
+            const mainMenuText = `🖥 <b>Server Monitor Pro 探针管理</b>\n\n您可以使用命令快速设置系统：\n<code>/set_interval 10</code> - 上报间隔10秒\n<code>/set_sitetitle 新标题</code> - 更改大盘标题\n<code>/nodes</code> - 查看全部节点\n<code>/proxy &lt;ip&gt; on|off</code> - 开关住宅代理\n<code>/stats</code> - 流量统计\n<code>/deploy8 &lt;ip&gt; [端口]</code> - 指定VPS下发8合1节点\n<code>/menu</code> - 调出本菜单`;
+            const mainMenuKb = { inline_keyboard: [ [{text: '📋 探针节点列表', callback_data: 'cb_list_nodes'}], [{text: '🖥 节点矩阵', callback_data: 'cb_list_xnodes'}], [{text: '🌐 住宅代理', callback_data: 'cb_proxy_menu'}, {text: '📊 流量统计', callback_data: 'cb_stats'}], [{text: '⚙️ 系统设置快捷开关', callback_data: 'cb_settings'}] ] };
             
             if (callback_query) {
                 if (text === 'cb_menu') await tgEdit(chatId, msgId, mainMenuText, mainMenuKb);
@@ -693,12 +776,145 @@ async function handleProbeAPI(request, env, context, pathArray) {
                     if (key === 'is_public') await notifyRealtimePublicPolicy(env, db, next === 'true', url.origin).catch(() => {});
                     await tgSend(chatId, `✅ 属性 ${key} 已成功切换！`);
                 }
+                else if (text === 'cb_list_xnodes') {
+                    const vpsList = (await db.prepare('SELECT ip, name FROM servers ORDER BY name').all()).results;
+                    let txt = '🖥 <b>节点矩阵</b>\n\n';
+                    if (!vpsList.length) txt += '暂无 VPS\n';
+                    for (const v of vpsList) {
+                        const nodes = (await db.prepare("SELECT protocol, port, enable, username FROM nodes WHERE vps_ip = ? ORDER BY port").bind(v.ip).all()).results;
+                        txt += `<b>${escapeHtml(v.name || v.ip)}</b> (${nodes.length} 节点)\n`;
+                        for (const n of nodes) txt += `  ${n.enable ? '🟢' : '⚪'} ${escapeHtml(n.protocol)}:${n.port} (${escapeHtml(n.username || '-')})\n`;
+                    }
+                    const kb = { inline_keyboard: [[{text: '🔙 返回', callback_data: 'cb_menu'}]] };
+                    await tgEdit(chatId, msgId, txt, kb);
+                }
+                else if (text === 'cb_proxy_menu') {
+                    const vpsList = (await db.prepare('SELECT ip, name FROM servers ORDER BY name').all()).results;
+                    if (!vpsList.length) return await tgEdit(chatId, msgId, '暂无 VPS', { inline_keyboard: [[{text: '🔙 返回', callback_data: 'cb_menu'}]] });
+                    let txt = '🌐 <b>住宅代理开关</b>\n\n点击按钮切换：';
+                    const kb = { inline_keyboard: [] };
+                    for (const v of vpsList) {
+                        const key = `proxy_slot_map_${v.ip}`;
+                        const row = await db.prepare("SELECT value FROM probe_settings WHERE key = ?").bind(key).first();
+                        let cfg = {}; try { cfg = JSON.parse(row && row.value || '{}'); } catch (e) {}
+                        const enabled = cfg.enabled !== false;
+                        txt += `\n${enabled ? '✅' : '⛔'} ${escapeHtml(v.name || v.ip)}`;
+                        kb.inline_keyboard.push([{ text: `${enabled ? '⛔ 关闭' : '✅ 开启'} ${escapeHtml(v.name || v.ip)}`, callback_data: `${enabled ? 'cb_proxy_off' : 'cb_proxy_on'}_${v.ip}` }]);
+                    }
+                    kb.inline_keyboard.push([{text: '🔙 返回', callback_data: 'cb_menu'}]);
+                    await tgEdit(chatId, msgId, txt, kb);
+                }
+                else if (text.startsWith('cb_proxy_')) {
+                    const parts = text.split('_'); // cb_proxy_on_<ip> / cb_proxy_off_<ip>
+                    const action = parts[2];
+                    const ip = parts.slice(3).join('_');
+                    const vps = await findVps(db, ip);
+                    if (!vps) return await tgSend(chatId, '❌ 未找到该 VPS');
+                    const enabled = await setProxyEnabled(db, env, vps.ip, action === 'on');
+                    try { context.waitUntil(notifyRealtimeVps(env, db, vps.ip).catch(() => {})); } catch (e) {}
+                    await tgSend(chatId, `✅ ${escapeHtml(vps.name || vps.ip)} 住宅代理已${enabled ? '开启' : '关闭'}`);
+                }
+                else if (text === 'cb_stats') {
+                    const vpsList = (await db.prepare('SELECT ip, name FROM servers ORDER BY name').all()).results;
+                    const sevenDays = Date.now() - 7 * 24 * 3600 * 1000;
+                    let txt = '📊 <b>流量统计（近7天）</b>\n\n';
+                    if (!vpsList.length) txt += '暂无 VPS\n';
+                    for (const v of vpsList) {
+                        const agg = await db.prepare("SELECT COALESCE(SUM(delta_bytes), 0) AS total FROM traffic_stats WHERE ip = ? AND timestamp > ?").bind(v.ip, sevenDays).first();
+                        const nodes = (await db.prepare("SELECT protocol, port, traffic_used, traffic_limit FROM nodes WHERE vps_ip = ? ORDER BY port").bind(v.ip).all()).results;
+                        txt += `<b>${escapeHtml(v.name || v.ip)}</b> 近7天: ${formatBytes(agg && agg.total || 0)}\n`;
+                        for (const n of nodes) {
+                            const limit = n.traffic_limit > 0 ? ` / ${formatBytes(n.traffic_limit)}` : '';
+                            txt += `  ${escapeHtml(n.protocol)}:${n.port} ${formatBytes(n.traffic_used || 0)}${limit}\n`;
+                        }
+                        if (!nodes.length) txt += '  （无节点）\n';
+                    }
+                    const kb = { inline_keyboard: [[{text: '🔙 返回', callback_data: 'cb_menu'}]] };
+                    await tgEdit(chatId, msgId, txt, kb);
+                }
+                else if (text.startsWith('cb_deploy8_')) {
+                    const parts = text.split('_'); // cb_deploy8_<ip>_<port>
+                    const ip = parts[2];
+                    const startPort = parseInt(parts[3], 10);
+                    const vps = await findVps(db, ip);
+                    if (!vps) return await tgSend(chatId, '❌ 未找到该 VPS');
+                    try {
+                        const summary = await deploy8Protocols(db, env, vps.ip, startPort);
+                        try { context.waitUntil(notifyRealtimeVps(env, db, vps.ip).catch(() => {})); } catch (e) {}
+                        await tgEdit(chatId, msgId, `🚀 <b>8合1 下发完成</b>\n\n${escapeHtml(vps.name || vps.ip)}\n\n${summary}`, null);
+                    } catch (err) {
+                        await tgEdit(chatId, msgId, `❌ 8合1 下发失败: ${escapeHtml(err.message)}`, null);
+                    }
+                }
             }
             if (message) {
                 const cmdParts = text.trim().split(/\s+/); const cmd = cmdParts[0].toLowerCase();
                 if (cmd === '/start' || cmd === '/menu') await tgSend(chatId, mainMenuText, mainMenuKb);
                 else if (cmd === '/set_interval' && cmdParts[1]) { await db.prepare('INSERT INTO probe_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind('report_interval', cmdParts[1]).run(); await tgSend(chatId, `✅ 上报间隔设为 ${cmdParts[1]} 秒`); }
                 else if (cmd === '/set_sitetitle') { await db.prepare('INSERT INTO probe_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind('site_title', text.replace(cmdParts[0], '').trim()).run(); await tgSend(chatId, '✅ 大盘标题已更新'); }
+                else if (cmd === '/nodes') {
+                    const vpsList = (await db.prepare('SELECT ip, name FROM servers ORDER BY name').all()).results;
+                    let txt = '🖥 <b>节点矩阵</b>\n\n';
+                    if (!vpsList.length) txt += '暂无 VPS\n';
+                    for (const v of vpsList) {
+                        const nodes = (await db.prepare("SELECT protocol, port, enable, username FROM nodes WHERE vps_ip = ? ORDER BY port").bind(v.ip).all()).results;
+                        txt += `<b>${escapeHtml(v.name || v.ip)}</b> (${nodes.length} 节点)\n`;
+                        for (const n of nodes) txt += `  ${n.enable ? '🟢' : '⚪'} ${escapeHtml(n.protocol)}:${n.port} (${escapeHtml(n.username || '-')})\n`;
+                    }
+                    await tgSend(chatId, txt);
+                }
+                else if (cmd === '/proxy') {
+                    const target = cmdParts[1] || '';
+                    if (!target) { await tgSend(chatId, '用法: <code>/proxy &lt;ip或名称&gt; on|off</code>\n例如: <code>/proxy 1.2.3.4 off</code>'); return; }
+                    const vps = await findVps(db, target);
+                    if (!vps) { await tgSend(chatId, '❌ 未找到该 VPS'); return; }
+                    const action = (cmdParts[2] || '').toLowerCase();
+                    if (action !== 'on' && action !== 'off') {
+                        const key = `proxy_slot_map_${vps.ip}`;
+                        const row = await db.prepare("SELECT value FROM probe_settings WHERE key = ?").bind(key).first();
+                        let cfg = {}; try { cfg = JSON.parse(row && row.value || '{}'); } catch (e) {}
+                        const enabled = cfg.enabled !== false;
+                        const kb = { inline_keyboard: [[
+                            { text: '✅ 开启', callback_data: `cb_proxy_on_${vps.ip}` },
+                            { text: '⛔ 关闭', callback_data: `cb_proxy_off_${vps.ip}` }
+                        ]]};
+                        await tgSend(chatId, `🌐 <b>住宅代理状态</b>\n\n${escapeHtml(vps.name || vps.ip)}: ${enabled ? '✅ 开启中' : '⛔ 已关闭'}`, kb);
+                        return;
+                    }
+                    const enabled = await setProxyEnabled(db, env, vps.ip, action === 'on');
+                    try { context.waitUntil(notifyRealtimeVps(env, db, vps.ip).catch(() => {})); } catch (e) {}
+                    await tgSend(chatId, `✅ ${escapeHtml(vps.name || vps.ip)} 住宅代理已${enabled ? '开启' : '关闭'}`);
+                }
+                else if (cmd === '/stats') {
+                    const vpsList = (await db.prepare('SELECT ip, name FROM servers ORDER BY name').all()).results;
+                    const sevenDays = Date.now() - 7 * 24 * 3600 * 1000;
+                    let txt = '📊 <b>流量统计（近7天）</b>\n\n';
+                    if (!vpsList.length) txt += '暂无 VPS\n';
+                    for (const v of vpsList) {
+                        const agg = await db.prepare("SELECT COALESCE(SUM(delta_bytes), 0) AS total FROM traffic_stats WHERE ip = ? AND timestamp > ?").bind(v.ip, sevenDays).first();
+                        const nodes = (await db.prepare("SELECT protocol, port, traffic_used, traffic_limit FROM nodes WHERE vps_ip = ? ORDER BY port").bind(v.ip).all()).results;
+                        txt += `<b>${escapeHtml(v.name || v.ip)}</b> 近7天: ${formatBytes(agg && agg.total || 0)}\n`;
+                        for (const n of nodes) {
+                            const limit = n.traffic_limit > 0 ? ` / ${formatBytes(n.traffic_limit)}` : '';
+                            txt += `  ${escapeHtml(n.protocol)}:${n.port} ${formatBytes(n.traffic_used || 0)}${limit}\n`;
+                        }
+                        if (!nodes.length) txt += '  （无节点）\n';
+                    }
+                    await tgSend(chatId, txt);
+                }
+                else if (cmd === '/deploy8') {
+                    const target = cmdParts[1] || '';
+                    if (!target) { await tgSend(chatId, '用法: <code>/deploy8 &lt;ip或名称&gt; [起始端口]</code>\n例如: <code>/deploy8 1.2.3.4 8881</code>'); return; }
+                    const vps = await findVps(db, target);
+                    if (!vps) { await tgSend(chatId, '❌ 未找到该 VPS'); return; }
+                    let startPort = parseInt(cmdParts[2] || '8881', 10);
+                    if (!Number.isInteger(startPort) || startPort < 10 || startPort + 7 > 65535) { await tgSend(chatId, '❌ 起始端口无效（范围 10 - 65528）'); return; }
+                    const kb = { inline_keyboard: [[
+                        { text: '🚀 确认下发', callback_data: `cb_deploy8_${vps.ip}_${startPort}` },
+                        { text: '取消', callback_data: 'cb_menu' }
+                    ]]};
+                    await tgSend(chatId, `🚀 <b>确认 8合1 下发</b>\n\n${escapeHtml(vps.name || vps.ip)}\n起始端口: ${startPort}\n\n将下发 8 个协议：\nXTLS-Reality, Hysteria2, TUIC, Trojan, H2-Reality, gRPC-Reality, AnyTLS, Naive`, kb);
+                }
             }
             return new Response('OK', { status: 200 });
         } catch(e) { return new Response('Webhook Error', {status:200}); }
