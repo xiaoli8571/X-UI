@@ -110,8 +110,28 @@ fi
 echo "[3/7] 📦 正在安装底层网络依赖..."
 ALIYUN_OK=0
 if [ "$INIT_SYS" = "openrc" ]; then
+    # 磁盘空间预检：apk 解压 I/O error 常因磁盘满或缓存损坏
+    DISK_AVAIL_KB=$(df -P / | awk 'NR==2 {print $4}')
+    if [ "${DISK_AVAIL_KB:-0}" -lt 204800 ]; then
+        echo "⚠️ 磁盘剩余不足 200MB（当前 $(df -h / | awk 'NR==2 {print $4}' | tr -d '\n')），先清理 apk 缓存..."
+        rm -rf /var/cache/apk/*
+        df -h / | awk 'NR==2 {print "   清理后剩余: " $4}'
+    fi
     apk update || echo "⚠️ apk update 失败，尝试使用现有缓存安装。"
-    apk add python3 py3-websocket-client curl openssl iptables coreutils bash tar libc6-compat gcompat iproute2
+    APK_TRY=0
+    while [ "$APK_TRY" -lt 3 ]; do
+        if apk add python3 py3-websocket-client curl openssl iptables coreutils bash tar libc6-compat gcompat iproute2; then
+            break
+        fi
+        APK_TRY=$((APK_TRY+1))
+        echo "⚠️ apk add 第 ${APK_TRY} 次失败，清理缓存后重试..."
+        rm -rf /var/cache/apk/*
+        apk update || true
+    done
+    if [ "$APK_TRY" -ge 3 ] && ! command -v python3 >/dev/null 2>&1; then
+        echo "❌ python3 安装失败（可能磁盘空间不足或网络异常），请手动执行: apk add python3"
+        exit 1
+    fi
 else
     if apt-get update -y >/tmp/xui_apt_update.log 2>&1; then
         cat /tmp/xui_apt_update.log
@@ -309,23 +329,15 @@ EOF
     systemctl start xui-agent
 fi
 
-echo "[7/7] 🌐 部署住宅 IP 主备双隧道代理..."
-PROXY_INSTALLER_URL="${API_URL}/api/agent_update?ip=${VPS_IP}&component=proxy-installer"
-PROXY_INSTALLER_TEMP="/opt/xui/residential-proxy.sh.download"; PROXY_INSTALLER_HEADERS="/opt/xui/residential-proxy.sh.headers"
-cleanup_proxy_installer() { rm -f "$PROXY_INSTALLER_TEMP" "$PROXY_INSTALLER_HEADERS"; }
-curl -fsSL --retry 3 --retry-delay 2 -A "$CURL_USER_AGENT" -D "$PROXY_INSTALLER_HEADERS" -H "Authorization: ${TOKEN}" "$PROXY_INSTALLER_URL" -o "$PROXY_INSTALLER_TEMP"
-EXPECTED_INSTALLER_SHA=$(tr -d '\r' < "$PROXY_INSTALLER_HEADERS" | awk '/^[Xx]-[Aa]gent-[Ss][Hh][Aa]256:/ {print tolower($2)}' | tail -n 1)
-verify_agent_manifest proxy-installer "$PROXY_INSTALLER_TEMP" "$PROXY_INSTALLER_HEADERS" || { echo "❌ residential-proxy.sh 更新清单校验失败"; exit 1; }
-bash -n "$PROXY_INSTALLER_TEMP"
-chmod 700 "$PROXY_INSTALLER_TEMP"
-bash "$PROXY_INSTALLER_TEMP" --domain "$API_URL" --controller "${PROXY_API_URL:-$API_URL}" --ip "$VPS_IP" --token "$TOKEN"
-cleanup_proxy_installer
+# 住宅 IP 主备双隧道代理已移除（精简）：agent 安装不再部署住宅代理组件
+echo "[7/7] ✅ 跳过住宅 IP 代理（已精简移除）"
+
 INSTALL_SUCCESS=1
 rm -rf "$BACKUP_DIR"
 trap - EXIT INT TERM
 
 echo "=========================================="
-echo " 🎉 XUI + 住宅 IP 双隧道代理部署成功！"
+echo " 🎉 XUI Agent 部署成功！"
 echo " 节点 IP: ${VPS_IP}"
 echo " 系统架构: ${OS}"
 echo "=========================================="

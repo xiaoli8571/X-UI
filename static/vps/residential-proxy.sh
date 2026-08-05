@@ -42,7 +42,10 @@ if [ -z "$VPS_IP" ]; then
 fi
 if ! printf '%s' "$AGENT_TOKEN" | grep -Eq '^[A-Za-z0-9._:-]+$'; then echo "❌ Agent Token 包含非法字符"; exit 1; fi
 if ! printf '%s\n%s\n' "$DOMAIN" "$CONTROLLER" | grep -Eq '^https://[A-Za-z0-9._:/-]+$'; then echo "❌ 域名参数必须使用 HTTPS"; exit 1; fi
-if ! printf '%s' "$VPS_IP" | grep -Eq '^[0-9A-Fa-f:.]+$'; then echo "❌ VPS IP 格式无效"; exit 1; fi
+# Accept both IPv4/IPv6 and domain names (FQDN)
+VPS_IP_TRIMMED=$(echo "$VPS_IP" | tr -d '[:space:]')
+if ! printf '%s' "$VPS_IP_TRIMMED" | grep -Eq '^[0-9A-Fa-f:.a-zA-Z-]{2,255}$'; then echo "❌ VPS IP 格式无效"; exit 1; fi
+export VPS_IP="$VPS_IP_TRIMMED"
 
 export C2_URL="$CONTROLLER"
 export WEB_USER="${WEB_USER:-admin}"
@@ -103,10 +106,29 @@ install_dependencies() {
                 || { echo "❌ 依赖安装失败"; exit 1; }
             ;;
         apk)
+            # 磁盘空间预检：apk 解压 I/O error 常因磁盘满或缓存损坏
+            DISK_AVAIL_KB=$(df -P / | awk 'NR==2 {print $4}')
+            if [ "${DISK_AVAIL_KB:-0}" -lt 204800 ]; then
+                echo "⚠️ 磁盘剩余不足 200MB（当前 $(df -h / | awk 'NR==2 {print $4}' | tr -d '\n')），先清理 apk 缓存..."
+                rm -rf /var/cache/apk/*
+                df -h / | awk 'NR==2 {print "   清理后剩余: " $4}'
+            fi
             apk update || true
-            apk add --no-cache \
-                openvpn python3 py3-websocket-client curl openssl iproute2 iptables dcron psmisc \
-                || { echo "❌ apk 依赖安装失败"; exit 1; }
+            APK_TRY=0
+            while [ "$APK_TRY" -lt 3 ]; do
+                if apk add --no-cache \
+                    openvpn python3 py3-websocket-client curl openssl iproute2 iptables dcron psmisc; then
+                    break
+                fi
+                APK_TRY=$((APK_TRY+1))
+                echo "⚠️ apk add 第 ${APK_TRY} 次失败，清理缓存后重试..."
+                rm -rf /var/cache/apk/*
+                apk update || true
+            done
+            if [ "$APK_TRY" -ge 3 ] && ! command -v python3 >/dev/null 2>&1; then
+                echo "❌ apk 依赖安装失败（可能磁盘空间不足或网络异常），请手动执行: apk add --no-cache openvpn python3"
+                exit 1
+            fi
             ;;
         yum|dnf)
             $PKG_MGR install -y \
@@ -142,7 +164,7 @@ setup_tun() {
     echo "[1.5/4] 检查 TUN/TAP 设备..."
     if [ -e /dev/net/tun ]; then
         echo "[+] /dev/net/tun 已存在"
-        return
+        return 0
     fi
     echo "[*] /dev/net/tun 不存在，尝试创建..."
     mkdir -p /dev/net
@@ -155,15 +177,17 @@ setup_tun() {
         fi
     fi
     if [ ! -e /dev/net/tun ]; then
-        echo "❌ 错误: /dev/net/tun 不存在，无法创建 TUN 设备。"
+        echo "⚠️ 警告: /dev/net/tun 不存在，无法创建 TUN 设备。"
         echo "    可能原因："
         echo "    1. 内核未编译 tun 模块"
         echo "    2. 容器/虚拟化环境未开放 /dev/net/tun"
         echo "    3. 需要宿主机开启 TUN 设备"
-        echo "    请先在宿主机或控制台开启 TUN/TAP 支持后重试。"
-        exit 1
+        echo "    将自动跳过住宅代理组件（agent + sing-box 不受影响）。"
+        echo "    如需住宅代理功能，请在宿主机或控制台开启 TUN/TAP 后重试。"
+        return 1
     fi
     echo "[+] TUN/TAP 设备已就绪"
+    return 0
 }
 
 download_agents() {
@@ -370,7 +394,25 @@ main() {
 
     install_dependencies
     setup_sysctl
-    setup_tun
+    # TUN 不可用时自动跳过住宅代理（agent + sing-box 不受影响）
+    if ! setup_tun; then
+        echo ""
+        echo "=========================================================="
+        echo "[!] 当前环境不支持 TUN/TAP，已跳过住宅IP代理组件。"
+        echo "    agent + sing-box 代理服务正常可用。"
+        echo "    如需住宅代理，请在宿主机/控制台开启 TUN/TAP 后重新安装。"
+        echo "=========================================================="
+        if [ "$INIT_SYS" = "systemd" ]; then
+            systemctl restart xui-agent 2>/dev/null || true
+        elif [ "$INIT_SYS" = "openrc" ]; then
+            rc-service xui-agent restart 2>/dev/null || true
+        fi
+        restore_core_services
+        INSTALL_SUCCESS=1
+        rm -rf "$BACKUP_DIR"
+        trap - EXIT INT TERM
+        exit 0
+    fi
     download_agents
     install_service
     if [ "$INIT_SYS" = "systemd" ]; then

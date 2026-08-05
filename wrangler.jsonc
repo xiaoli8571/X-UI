@@ -1,16 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "xui",
-  "account_id": "ad895d004dceaee560295b4256cf24ff",
   "main": "src/worker.js",
   "compatibility_date": "2026-07-15",
   "workers_dev": true,
   "vars": {
     "ADMIN_USERNAME": "admin",
-    "ADMIN_PASSWORD": "admin",
+    "ADMIN_PASSWORD": "",
     "PROXY_USER": "",
     "PROXY_PASS": "",
-    "TG_WEBHOOK_SECRET": "xui-tg-zkOlUgSiGLNaIbZ1Fj8cXnYhV3quHsv2"
+    "TG_WEBHOOK_SECRET": ""
   },
   "assets": {
     "directory": "static",

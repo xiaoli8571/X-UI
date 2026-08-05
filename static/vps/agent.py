@@ -56,7 +56,8 @@ except Exception:
     exit(1)
 
 API_URL = env["api_url"]
-REPORT_URL = env["report_url"]
+# 容错：report_url 缺失时按同域推导（探针模式 config 若缺字段不崩溃）
+REPORT_URL = env.get("report_url") or API_URL
 VPS_IP = env["ip"]
 TOKEN = env["token"]
 
@@ -387,10 +388,11 @@ def check_for_update():
             pass
     return False
 
-# Dashboard viewers receive five-second updates. While nobody is connected,
-# Durable Objects switch routine metric snapshots to a lower rate.
+# Quota-friendly defaults for Cloudflare Workers free tier (100k requests/day shared).
+# 20 VPS x 60s = ~28.8k HTTP/day + DO WS ~5.8k/day + dashboard polling ~1.4k/day
+# ≈ 36k/day (36%) — safe margin below the 100k limit.
 REALTIME_STATUS_ACTIVE_INTERVAL = 60
-REALTIME_STATUS_IDLE_INTERVAL = 300
+REALTIME_STATUS_IDLE_INTERVAL = 120
 realtime_status_interval = REALTIME_STATUS_ACTIVE_INTERVAL
 global_interval = REALTIME_STATUS_ACTIVE_INTERVAL
 fast_mode = False
@@ -399,9 +401,12 @@ heartbeat_wakeup = threading.Event()
 realtime_channel = None
 last_http_report = 0
 # Keep D1's fallback snapshot fresh for dashboard reloads and reconnects.
-# WebSocket remains the primary five-second live channel. HTTP fallback is
+# WebSocket remains the primary live channel. HTTP fallback is
 # throttled to 5 minutes so idle agents don't burn Workers quota.
-REALTIME_HTTP_INTERVAL = 300
+REALTIME_HTTP_INTERVAL = 120
+# 面板可动态配置的兜底间隔（report 响应更新）— 默认 60s，平衡实时性与免费额度
+HEARTBEAT_INTERVAL_FALLBACK = 60
+CONFIG_INTERVAL_FALLBACK = 60
 
 # 🌟 增加全局 Ping 状态缓存锁，防止在非测速轮次上传 '0' 导致前端图表归零
 last_pings = {"ct": "0", "cu": "0", "cm": "0", "bd": "0"}
@@ -417,6 +422,11 @@ pending_report_id = _pending.get("report_id")
 pending_report_bytes = _pending.get("report_bytes")
 pending_node_traffic = _pending.get("node_traffic")
 pending_report_payload = _pending.get("payload")
+# 防呆：恢复的上报 payload 若 ip 与当前配置不一致（如宿主机换 IP / 从完整版切探针），
+# 丢弃旧 payload，避免用旧 IP 上报导致 401
+if pending_report_payload and pending_report_payload.get("ip") != VPS_IP:
+    pending_report_payload = None
+    pending_report_id = None
 egress_retry_timer = None
 egress_retry_lock = threading.Lock()
 
@@ -555,6 +565,19 @@ def _read_iptables_port_bytes(port, protocol):
                 pass
     return total if found else None
 
+def get_active_connections():
+    """从 sing-box Clash API 获取当前活跃连接数（探针模式无 sing-box 返回 0）"""
+    try:
+        req = urllib.request.Request("http://127.0.0.1:9090/connections", headers={"User-Agent": "XUI-Agent"}, method="GET")
+        with urllib.request.urlopen(req, timeout=3) as r:
+            data = json.loads(r.read().decode("utf-8"))
+            conns = data.get("connections") if isinstance(data, dict) else None
+            if isinstance(conns, list):
+                return len(conns)
+    except Exception:
+        pass
+    return 0
+
 def get_port_traffic(port, protocol="tcp", node_id=None):
     node_tag = f"in-{node_id}" if node_id else None
 
@@ -581,6 +604,16 @@ def get_port_traffic(port, protocol="tcp", node_id=None):
                     return int(arr[0]) + int(arr[1])
         except Exception:
             pass
+
+    # Fallback: 防火墙 per-port 计数器（iptables/nftables 累计字节）。
+    # sing-box 的 clash_api 不支持 /stats/inbound（mihomo 专属），因此用
+    # ensure_firewall_open 插入的 dport(INPUT)/sport(OUTPUT) ACCEPT 规则计量。
+    try:
+        fw = _read_iptables_port_bytes(port, protocol)
+        if fw is not None:
+            return fw
+    except Exception:
+        pass
 
     # Firewall counters include unauthenticated probes and are not reliable
     # per-user billing data. Fail closed until sing-box stats are available.
@@ -771,6 +804,13 @@ def build_singbox_config(nodes, proxy_cfg=None, peers=None, mesh=None, socks5_ou
     global proxy_port_conflict
     singbox_config = {
         "log": {"level": "warn"},
+        # 启用 Clash API（127.0.0.1:9090），提供 /stats/inbound/{tag} 流量统计
+        "experimental": {
+            "clash_api": {
+                "external_controller": "127.0.0.1:9090",
+                "secret": ""
+            }
+        },
         "inbounds": [],
         "outbounds": [{"type": "direct", "tag": "direct-out"}],
         "route": {"rules": []}
@@ -1069,9 +1109,10 @@ def build_singbox_config(nodes, proxy_cfg=None, peers=None, mesh=None, socks5_ou
             except OSError: pass
 
 def report_status(current_nodes, argo_urls, force_http=False, allow_http=True):
-    global last_reported_bytes, global_interval, fast_mode, dynamic_ping, pending_report_id, pending_report_bytes, pending_node_traffic, pending_report_payload, last_http_report
+    global last_reported_bytes, global_interval, fast_mode, dynamic_ping, pending_report_id, pending_report_bytes, pending_node_traffic, pending_report_payload, last_http_report, REALTIME_STATUS_ACTIVE_INTERVAL, REALTIME_STATUS_IDLE_INTERVAL, REALTIME_HTTP_INTERVAL, HEARTBEAT_INTERVAL_FALLBACK, CONFIG_INTERVAL_FALLBACK
     status = get_system_status(global_interval)
     status["ip"] = VPS_IP
+    status["connections"] = get_active_connections()
     status["argo_urls"] = argo_urls
     
     deltas = []
@@ -1125,6 +1166,19 @@ def report_status(current_nodes, argo_urls, force_http=False, allow_http=True):
         _write_json_state(TRAFFIC_STATE_PATH, {"last_reported_bytes": last_reported_bytes, "pending": None})
         if resp_data and "interval" in resp_data:
             global_interval = min(max(1, int(resp_data["interval"])), 3600)
+        # 面板一键推送更新：force_update 比上次处理的时间戳新 → 立即更新组件
+        fu = resp_data.get("force_update")
+        if fu:
+            try:
+                last_done = 0
+                if os.path.exists("/opt/xui/.last-update"):
+                    last_done = int(open("/opt/xui/.last-update").read().strip() or 0)
+                if int(fu) > last_done:
+                    with open("/opt/xui/.last-update", "w") as f: f.write(str(int(fu)))
+                    print("[agent] force update requested by panel", flush=True)
+                    check_for_update()
+            except Exception as e:
+                print(f"[agent] force update handling failed: {e}", flush=True)
         new_fast_mode = bool(resp_data.get("fast_mode"))
         if new_fast_mode and not fast_mode:
             config_wakeup.set()
@@ -1132,6 +1186,23 @@ def report_status(current_nodes, argo_urls, force_http=False, allow_http=True):
         for key in ("ct", "cu", "cm"):
             value = resp_data.get(f"ping_{key}")
             dynamic_ping[key] = None if not value or value == "default" else value
+        # 面板系统设置可配置的间隔（动态更新；CF 免费额度守护：lo 下限即安全线，低于会被拒绝）
+        def _clamp_interval(v, default, lo=30, hi=3600):
+            try:
+                n = int(v)
+                return max(lo, min(hi, n))
+            except (TypeError, ValueError):
+                return default
+        if "interval_active" in resp_data:
+            REALTIME_STATUS_ACTIVE_INTERVAL = _clamp_interval(resp_data["interval_active"], 60, lo=30)
+        if "interval_idle" in resp_data:
+            REALTIME_STATUS_IDLE_INTERVAL = _clamp_interval(resp_data["interval_idle"], 120, lo=60)
+        if "interval_http" in resp_data:
+            REALTIME_HTTP_INTERVAL = _clamp_interval(resp_data["interval_http"], 120, lo=60)
+        if "interval_heartbeat" in resp_data:
+            HEARTBEAT_INTERVAL_FALLBACK = _clamp_interval(resp_data["interval_heartbeat"], 60, lo=30)
+        if "interval_config" in resp_data:
+            CONFIG_INTERVAL_FALLBACK = _clamp_interval(resp_data["interval_config"], 60, lo=60)
         return True
     except Exception as error:
         print(f"[agent] status report failed: {error}", flush=True)
@@ -1228,6 +1299,12 @@ def report_proxy_status():
 
 def fetch_and_apply_configs():
     global REALTIME_URL, realtime_channel
+    # 探针模式：宿主机只上报状态（不构建 sing-box，代理跑在容器里）
+    probe_only = os.environ.get("PROBE_ONLY") == "1"
+    try:
+        with open(CONF_FILE, "r", encoding="utf-8") as f: _cfg = json.load(f)
+        if _cfg.get("probe_only"): probe_only = True
+    except Exception: pass
     try:
         with urllib.request.urlopen(urllib.request.Request(f"{API_URL}?ip={VPS_IP}", headers=HEADERS), timeout=10) as response:
             data = json.loads(response.read().decode('utf-8'))
@@ -1292,6 +1369,10 @@ def fetch_and_apply_configs():
                 runtime_socks = {}
             runtime_warp = runtime_egress[5:] if runtime_egress.startswith("warp_") else "off"
             config_hash = hashlib.sha256(json.dumps({"nodes": nodes, "egress": runtime_egress}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            if probe_only:
+                # 探针模式：跳过 sing-box 构建（保持心跳上报系统状态）
+                print("[agent] probe-only: skipping sing-box build", flush=True)
+                return nodes if nodes is not None else []
             try:
                 if runtime_egress == "residential" and not residential.get("available"): raise RuntimeError("residential proxy is unavailable")
                 build_singbox_config(nodes, current_proxy_config, peers, mesh, runtime_socks, runtime_warp)
@@ -1353,6 +1434,16 @@ def fetch_and_apply_configs():
 if __name__ == "__main__":
     heartbeat_state = {"nodes": [], "argo_urls": []}
 
+    # 探针模式：宿主机只上报状态（不构建 sing-box 代理，代理跑在容器里）
+    probe_only = os.environ.get("PROBE_ONLY") == "1"
+    try:
+        with open(CONF_FILE, "r", encoding="utf-8") as f: _cfg = json.load(f)
+        if _cfg.get("probe_only"): probe_only = True
+    except Exception:
+        pass
+    if probe_only:
+        print("[agent] probe-only mode: status reporting only, no sing-box", flush=True)
+
     def on_realtime_message(message):
         global realtime_status_interval
         if message.get("type") == "status.interval":
@@ -1385,18 +1476,34 @@ if __name__ == "__main__":
             elif realtime_channel and realtime_channel.ever_connected and time.time() - realtime_channel.last_disconnected < 30:
                 heartbeat_interval = max(1, 30 - (time.time() - realtime_channel.last_disconnected))
             else:
-                heartbeat_interval = 300
+                heartbeat_interval = HEARTBEAT_INTERVAL_FALLBACK
             heartbeat_wakeup.wait(timeout=max(1, heartbeat_interval - min(heartbeat_interval - 1, elapsed)))
             heartbeat_wakeup.clear()
 
     time.sleep(2)
     initial_nodes = fetch_and_apply_configs()
     if os.path.exists("/opt/xui/.update-pending"):
-        if initial_nodes is None or not _singbox_service_healthy() or not report_status(list(initial_nodes), [], force_http=True):
-            print("[agent] updated version failed readiness checks", flush=True)
-            raise SystemExit(1)
-        try: os.remove("/opt/xui/.update-pending")
-        except FileNotFoundError: pass
+        if probe_only:
+            # 探针模式无 sing-box，不参与更新 readiness 检查
+            try: os.remove("/opt/xui/.update-pending")
+            except FileNotFoundError: pass
+        elif initial_nodes is None or not _singbox_service_healthy() or not report_status(list(initial_nodes), [], force_http=True):
+            print("[agent] updated version failed readiness checks — rolling back to last-good", flush=True)
+            # 回滚：恢复 .last-good 备份，而不是直接退出（避免 agent 自杀导致永久离线）
+            try:
+                for comp in ("agent", "realtime-client"):
+                    backup = os.path.join(os.path.dirname(os.path.abspath(__file__)), comp + ".py.last-good")
+                    target = os.path.join(os.path.dirname(os.path.abspath(__file__)), comp + ".py")
+                    if os.path.exists(backup):
+                        shutil.copy2(backup, target)
+                        print(f"[agent] rolled back {comp}.py", flush=True)
+            except Exception as rollback_error:
+                print(f"[agent] rollback failed: {rollback_error}", flush=True)
+            try: os.remove("/opt/xui/.update-pending")
+            except FileNotFoundError: pass
+        else:
+            try: os.remove("/opt/xui/.update-pending")
+            except FileNotFoundError: pass
     if initial_nodes is not None: heartbeat_state["nodes"] = initial_nodes
     threading.Thread(target=heartbeat_loop, name="xui-heartbeat", daemon=True).start()
     while True:
@@ -1418,5 +1525,5 @@ if __name__ == "__main__":
         elapsed = time.monotonic() - loop_started
         if elapsed > 20:
             print(f"[agent] slow loop completed in {elapsed:.1f}s", flush=True)
-        config_interval = REALTIME_HTTP_INTERVAL if realtime_channel and realtime_channel.connected else 600
+        config_interval = REALTIME_HTTP_INTERVAL if realtime_channel and realtime_channel.connected else CONFIG_INTERVAL_FALLBACK
         config_wakeup.wait(timeout=max(1, config_interval - min(config_interval - 1, elapsed)))
