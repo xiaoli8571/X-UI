@@ -2245,7 +2245,7 @@ rules:
                 try {
                     const raw = await request.text();
                     try { list = JSON.parse(raw); }
-                    catch (e) { list = JSON.parse(raw.replace(/,\s*([}\]])/g, '$1')); }
+                    catch (e) { list = JSON.parse(raw.replace(/,\s*([}\])])/g, '$1')); }
                 } catch (e) { return Response.json({ error: 'Invalid JSON body' }, { status: 400 }); }
                 if (!Array.isArray(list)) {
                     if (list && Array.isArray(list.servers)) list = list.servers;
