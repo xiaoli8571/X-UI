@@ -1423,7 +1423,8 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const resetUserTraffic = async (username) => { await fetchApi('/api/users', { method: 'PUT', body: JSON.stringify({ username, reset_traffic: true }) }); refreshData(); };
                 const copyUserSubLink = (u, format = '') => {
                     if (!u || !u.sub_token) return alert('该用户暂无订阅令牌，请刷新后重试');
-                    const base = subDomain.value || currentDomain.value;
+                    // currentDomain 是普通字符串（window.location.origin），不是 ref，不能用 .value
+                    const base = subDomain.value || currentDomain;
                     let link = `${base}/api/sub?user=${encodeURIComponent(u.username)}&token=${encodeURIComponent(u.sub_token)}`;
                     if (format) link += `&format=${format}`;
                     copyCommand(link, `用户 ${u.username} 的${format === 'clash' ? ' Clash ' : ' '}订阅链接已复制！\n该订阅将执行该用户的流量/时间限制。`);
@@ -1644,7 +1645,8 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 
                 const generateSubLink = (ip='', format='') => { 
                     const tokenToUse = mySubToken.value || authKey.value; 
-                    const base = subDomain.value || currentDomain.value;
+                    // currentDomain 是普通字符串（window.location.origin），不是 ref，不能用 .value
+                    const base = subDomain.value || currentDomain;
                     let link = `${base}/api/sub?user=${encodeURIComponent(currentUser.value)}&token=${encodeURIComponent(tokenToUse)}`;
                     if (ip) link += `&ip=${ip}`;
                     if (format) link += `&format=${format}`;
