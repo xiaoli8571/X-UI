@@ -7,6 +7,11 @@
   "vars": {
     "ADMIN_USERNAME": "admin",
     "ADMIN_PASSWORD": "",
+    // 住宅代理凭据（可选）：留空 = 住宅代理关闭（零轮询零额度消耗，推荐）
+    // 启用方法：部署后在 Dashboard → Settings → Variables and Secrets 添加
+    //   PROXY_USER=你的用户名  PROXY_PASS=你的密码  （用 Secret 类型，改完重新部署）
+    // ⚠️ 注意：这里不要填非空默认值——vars 里非空值会被当作"已配置"从而启用
+    //    住宅代理轮询，若没有真实住宅出口账号会持续产生请求烧掉免费额度。
     "PROXY_USER": "",
     "PROXY_PASS": "",
     "TG_WEBHOOK_SECRET": ""

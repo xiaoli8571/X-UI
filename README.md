@@ -56,14 +56,27 @@ XUI 是一个部署在 **单一 Cloudflare Worker** 的代理节点管理与服�
 
 住宅代理默认**关闭**（`PROXY_USER`/`PROXY_PASS` 为空 = 零轮询零消耗）。
 
-启用住宅代理时，在 Worker 的 **Variables and Secrets** 中设置独立的强 Secret 并重新部署：
+### 住宅代理是什么
+
+让节点出口 IP 变成**住宅 IP**（真实家庭宽带 IP）而非机房 IP，用于解锁 Netflix / Disney+ / ChatGPT 等流媒体与风控服务，是代理面板的高溢价卖点。
+
+### 如何启用（部署后按需开启）
+
+1. **VPS 侧**：目标 VPS 执行安装命令装住宅代理组件（`residential-proxy.sh` + proxy-lite），详见下方部署命令区的 `Full Deploy Command`（XUI + 住宅双隧道）。
+2. **面板侧**：在 Worker 的 **Settings → Variables and Secrets** 添加独立强 Secret 并重新部署：
 
 ```text
 PROXY_USER=你的用户名
 PROXY_PASS=你的密码
 ```
 
-配置后住宅代理自动启用；不用时可在面板「代理池」一键关闭（关闭后 VPS 端立即进入低功耗模式，停止轮询）。
+3. **前端**：VPS 卡片 → 出口模式选 **住宅 IP 代理**，可切换「全局代理」/「局部代理」；配置后住宅代理自动启用。
+
+### ⚠️ 额度注意事项
+
+- `wrangler.jsonc` 的 vars 里**不要填非空默认值**——vars 里非空值会被当作"已配置"从而启用住宅代理轮询，若没有真实住宅出口账号会持续产生请求，**烧掉免费额度**。
+- 正确姿势：仓库保持空值，部署后在 Dashboard 用 **Secret** 类型配置（Secret 不随仓库分发，且单独管理）。
+- 不用时在面板「代理池」一键关闭，VPS 端立即进入低功耗模式，停止轮询。
 
 ## 自定义域名
 
