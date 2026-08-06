@@ -158,7 +158,7 @@ npx wrangler deploy
 
 > 安全：Webhook 同时校验 `X-Telegram-Bot-Api-Secret-Token` 与 `chat_id`，只有你本人能控制。
 
-## 住宅代理与额度说明
+## 住宅代理与额度说明(住宅代理功能暂时未上线)
 
 - **默认关闭**：`PROXY_USER`/`PROXY_PASS` 未配置时，VPS 端住宅代理组件进入**低功耗模式**（不轮询、不上报），不消耗 Worker 额度。
 - **启用**：配置凭据后自动启用（VPS 恢复 480s 低频轮询）。
