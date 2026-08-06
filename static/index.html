@@ -559,7 +559,7 @@
                                         <div v-if="node.protocol === 'VLESS-Argo'" class="text-[11px] p-1.5 rounded-lg overflow-hidden text-ellipsis whitespace-nowrap max-w-full inline-block" :class="node.sni.includes('等待') ? 'bg-amber-50 text-amber-600 animate-pulse font-bold' : 'bg-emerald-50 border border-emerald-100 text-emerald-700 font-mono font-bold'">Argo: {{ node.sni }}</div>
                                         <div v-else-if="node.sni" class="text-[11px] bg-slate-50 text-slate-500 p-1.5 rounded-lg overflow-hidden text-ellipsis font-mono inline-block">SNI: {{ node.sni }}</div>
                                     </div>
-                                    <div class="flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><button @click="toggleNode(node.id, node.enable === 1 ? 0 : 1)" class="text-[11px] px-2 py-1 rounded-md bg-white border border-slate-200 hover:bg-slate-50 font-bold text-slate-600 shadow-sm">{{ node.enable === 1 ? '停用' : '启用' }}</button><button @click="deleteNode(node.id)" class="text-rose-500 text-[11px] px-2 py-1 bg-white border border-rose-100 rounded-md hover:bg-rose-50 font-bold shadow-sm">删除</button></div>
+                                    <div class="flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><button @click="toggleNode(node.id, node.enable === 1 ? 0 : 1)" class="text-[11px] px-2 py-1 rounded-md bg-white border border-slate-200 hover:bg-slate-50 font-bold text-slate-600 shadow-sm">{{ node.enable === 1 ? '停用' : '启用' }}</button><button @click="openRenameNodeModal(node)" title="修改节点名称（订阅备注）" class="text-indigo-500 text-[11px] px-2 py-1 bg-white border border-indigo-100 rounded-md hover:bg-indigo-50 font-bold shadow-sm">改名</button><button @click="deleteNode(node.id)" class="text-rose-500 text-[11px] px-2 py-1 bg-white border border-rose-100 rounded-md hover:bg-rose-50 font-bold shadow-sm">删除</button></div>
                                 </div>
                                 <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden"><div :class="(node.traffic_limit > 0 && node.traffic_used >= node.traffic_limit) ? 'bg-rose-400' : 'bg-slate-800'" class="h-1.5 rounded-full transition-all duration-500" :style="{ width: getTrafficPercent(node.traffic_used, node.traffic_limit) + '%' }"></div></div>
                                 <div class="flex justify-between text-[10px] text-slate-400 mt-2 font-medium"><span>已用: {{ formatBytes(node.traffic_used) }} <span v-if="node.traffic_limit > 0">/ {{ formatBytes(node.traffic_limit) }}</span></span><div class="flex gap-3"><span v-if="node.expire_time > 0">到期: {{ formatDate(node.expire_time) }}</span><button v-if="node.traffic_used > 0" @click="resetTraffic(node.id)" class="text-indigo-500 hover:underline font-bold">清零</button></div></div>
@@ -1777,6 +1777,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 // ---- VPS IP 修改（全局弹窗逻辑见文件底部）----
                 const openChangeIpModal = (vps) => window.openChangeIpModal(vps);
                 const openRenameVpsModal = (vps) => window.openRenameVpsModal(vps);
+                const openRenameNodeModal = (node) => window.openRenameNodeModal(node);
                 const closeChangeIp = () => window.closeChangeIp();
                 const saveChangeIp = () => window.saveChangeIp();
                 
@@ -1984,7 +1985,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     thirdPartySubscriptions, newThirdParty, loadingThirdParty, loadThirdPartySubscriptions, addThirdPartySubscription, toggleThirdPartySubscription, deleteThirdPartySubscription,
                     manualProtocolOptions, newManualNode, manualNodes, manualLinkText, manualLinkLines, addManualLinks, loadManualNodes, addManualNode, toggleManualNode, deleteManualNode,
                     newDomainAlert, domainAlerts, loadDomainAlerts, addDomainAlert, toggleDomainAlert, deleteDomainAlert,
-                    openChangeIpModal, openRenameVpsModal, closeChangeIp, saveChangeIp,
+                    openChangeIpModal, openRenameVpsModal, openRenameNodeModal, closeChangeIp, saveChangeIp,
                     qrModalOpen, qrCodeImage, showQrCode, 
                     showWelcomePopup, closePopup,
                     availableThemes, pingNodes, pullGithubNodes, hasCustomCssFlag,
@@ -2025,7 +2026,44 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
         </div>
     </div>
 
+    <!-- ===== 修改节点名称弹窗 ===== -->
+    <div id="rename-node-modal" class="hidden fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7">
+            <h3 class="text-lg font-black text-slate-800 mb-1">✏️ 修改节点名称</h3>
+            <p class="text-xs text-slate-400 mb-5">自定义节点在订阅（Raw / Clash）中的备注名称；留空则回退到「VPS名 | 协议_端口」。</p>
+            <div class="space-y-4">
+                <div><label class="block text-xs font-bold text-slate-400 mb-1 pl-1">节点名称</label><input id="rename-node-name" placeholder="例如: 香港-CN2-01" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm"></div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="saveRenameNode()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all">💾 确认修改</button>
+                <button onclick="closeRenameNode()" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ===== 修改节点名称 =====
+        let renameNodeId = '';
+        function openRenameNodeModal(node) {
+            renameNodeId = node.id;
+            document.getElementById('rename-node-name').value = node.name || '';
+            document.getElementById('rename-node-modal').classList.remove('hidden');
+            setTimeout(() => { try { document.getElementById('rename-node-name').focus(); document.getElementById('rename-node-name').select(); } catch (e) {} }, 50);
+        }
+        function closeRenameNode() { document.getElementById('rename-node-modal').classList.add('hidden'); }
+        async function saveRenameNode() {
+            const newName = document.getElementById('rename-node-name').value.trim();
+            if (!confirm(`确认修改该节点名称${newName ? '为「' + newName + '」' : '（清空恢复默认备注）'}？`)) return;
+            try {
+                const token = localStorage.getItem('xui_auth_key') || '';
+                const res = await fetch('/api/nodes', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ id: renameNodeId, name: newName }) });
+                const r = await res.json();
+                if (!r.success) throw new Error(r.error || '修改失败');
+                closeRenameNode();
+                alert('✅ 节点名称已修改');
+                location.reload();
+            } catch (e) { alert('修改失败: ' + e.message); }
+        }
         // ===== 修改 VPS 名称 =====
         let renameVpsIp = '';
         function openRenameVpsModal(vps) {
